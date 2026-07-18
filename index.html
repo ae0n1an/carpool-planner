@@ -646,16 +646,11 @@
       /* ---------- event view ---------- */
       function renderEvent() {
         const short = seatShortage();
-        const flexFolk = pool().filter((k) => ev.people[k].flex);
         let shortLine = "";
         if (drivers().length && short > 0) {
-          shortLine = flexFolk.length
-            ? `<span class="hint-warn">${short} seat${
-                short > 1 ? "s" : ""
-              } short — ${esc(ev.people[flexFolk[0]].name)} could drive</span>`
-            : `<span class="hint-warn">${short} seat${
-                short > 1 ? "s" : ""
-              } short</span>`;
+          shortLine = `<span class="hint-warn">${short} seat${
+            short > 1 ? "s" : ""
+          } short</span>`;
         }
         app.innerHTML = `
     <div class="topbar">
@@ -707,12 +702,6 @@
             ? `<div class="card" style="margin-bottom:14px;">
           <div class="field"><label>Passenger seats (excl. you) *</label>
             <input type="number" id="ac-seats" min="1" max="12" value="4"></div>
-          <div class="field"><label>Departing from *</label>
-            <div class="row">
-              <input type="text" id="ac-loc" placeholder="Full street address" style="flex:1; min-width:0;">
-              <button class="small" onclick="geoLocate(this,'ac-loc')" title="Use my current location">Locate me</button>
-            </div>
-          </div>
           <div class="field"><label>Leaving at</label>
             <input type="time" id="ac-leave"></div>
           <div class="row">
@@ -757,23 +746,19 @@
 
       async function addCar() {
         const seatsInput = document.getElementById("ac-seats");
-        const locInput = document.getElementById("ac-loc");
         const leaveInput = document.getElementById("ac-leave");
         const seats = Math.max(
           1,
           Math.min(12, parseInt(seatsInput.value, 10) || 1)
         );
-        const loc = locInput.value.trim();
         const leaveAt = leaveInput.value;
         addingCar = false;
         await mutate((e) => {
           const p = e.people[me];
           p.role = "drive";
           p.seats = seats;
-          p.loc = loc;
           p.leaveAt = leaveAt;
           p.carOf = null;
-          p.flex = false;
         });
       }
 
@@ -888,10 +873,8 @@
             name,
             pw: pw ? hash(pw) : null,
             role: null,
-            flex: false,
             seats: 4,
             loc: "",
-            meet: false,
             note: "",
             leaveAt: "",
             carOf: null,
