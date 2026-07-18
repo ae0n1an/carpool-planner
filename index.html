@@ -666,12 +666,12 @@
             ? ` &middot; aim to arrive by <b>${esc(ev.arriveBy)}</b>`
             : ""
         }</p>
+        <button class="small" style="margin-top:8px;" onclick="backToLanding()">New trip</button>
       </div>
-      <div style="max-width:320px;">
+      <div style="max-width:480px;">
         <div class="row" style="flex-wrap:wrap; justify-content:flex-end;">
           <button class="small primary" onclick="shareEvent(this)">Share</button>
           <button class="small" onclick="copyShare(this)">Copy link</button>
-          <button class="small" onclick="backToLanding()">New trip</button>
         </div>
         <code id="share-code" style="display:block; margin-top:6px; font-size:11px; color:var(--text2); word-break:break-all; text-align:right;">${esc(
           shareUrl()
@@ -679,8 +679,12 @@
         <p class="tiny" style="margin:4px 0 0; text-align:right;">Share this link so others can join — anyone with it can view and join, nothing private is shared.</p>
       </div>
     </div>
-    <div class="grid"${me ? ' style="grid-template-columns:1fr;"' : ""}>
-      ${me ? "" : `<div>${signInPanel()}</div>`}
+    <div class="grid" style="grid-template-columns:1fr;">
+      ${
+        me
+          ? ""
+          : `<div style="max-width:420px; margin:0 auto 14px;">${signInPanel()}</div>`
+      }
       <div>
         <div class="row" style="justify-content:space-between; margin-bottom:10px; flex-wrap:wrap;">
           <h2>Cars ${carsSummary()}</h2>
@@ -709,6 +713,8 @@
               <button class="small" onclick="geoLocate(this,'ac-loc')" title="Use my current location">Locate me</button>
             </div>
           </div>
+          <div class="field"><label>Leaving at</label>
+            <input type="time" id="ac-leave"></div>
           <div class="row">
             <button class="small primary" onclick="addCar()">Add my car</button>
             <button class="small" onclick="addingCar=false; render();">Cancel</button>
@@ -752,17 +758,20 @@
       async function addCar() {
         const seatsInput = document.getElementById("ac-seats");
         const locInput = document.getElementById("ac-loc");
+        const leaveInput = document.getElementById("ac-leave");
         const seats = Math.max(
           1,
           Math.min(12, parseInt(seatsInput.value, 10) || 1)
         );
         const loc = locInput.value.trim();
+        const leaveAt = leaveInput.value;
         addingCar = false;
         await mutate((e) => {
           const p = e.people[me];
           p.role = "drive";
           p.seats = seats;
           p.loc = loc;
+          p.leaveAt = leaveAt;
           p.carOf = null;
           p.flex = false;
         });
