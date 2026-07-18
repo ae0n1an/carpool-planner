@@ -1548,59 +1548,12 @@
       /* ---------- pool ---------- */
       function poolRow(k) {
         const p = ev.people[k];
-        const mine = k === me;
-        const flexBadge = p.flex
-          ? `<span class="badge" style="background:var(--amber-l); color:var(--amber-d);">can drive &middot; ${esc(
-              p.seats
-            )} seats</span>`
-          : "";
-        const meetBadge = p.meet
-          ? `<span class="badge" style="background:var(--blue-l); color:var(--blue-d);">will meet anywhere</span>`
-          : "";
-        if (mine) {
-          return `<div class="pool-row" style="align-items:flex-start;">
-    <div class="avatar" style="background:${
-      p.flex ? "var(--amber-l)" : "var(--blue-l)"
-    }; color:${p.flex ? "var(--amber-d)" : "var(--blue-d)"};">${initials(
-            p.name
-          )}</div>
-    <div style="flex:1; min-width:0;">
-      <div class="row" style="justify-content:space-between;">
-        <div style="font-size:13px; font-weight:600;">${esc(
-          p.name
-        )} ${flexBadge} ${meetBadge}</div>
-        <button class="small" onclick="signOut()">Sign out</button>
-      </div>
-      <div class="row" style="margin-top:6px;">
-        <input type="text" id="pr-loc" value="${esc(
-          p.loc
-        )}" placeholder="Full street address" style="flex:1; min-width:0;" onchange="saveMe({loc:this.value.trim()})">
-        <button class="small" onclick="geoLocate(this,'pr-loc')" title="Use my current location">Locate me</button>
-      </div>
-      <input type="text" value="${esc(
-        p.note
-      )}" placeholder="Bringing a cooler" style="margin-top:6px; width:100%;" onchange="saveMe({note:this.value.trim()})">
-      <label class="opt" style="display:flex; gap:8px; font-size:13px; color:var(--text2); margin-top:6px; cursor:pointer;">
-        <input type="checkbox" ${
-          p.flex ? "checked" : ""
-        } onchange="saveMe({flex:this.checked})"> Could drive if needed</label>
-      <label class="opt" style="display:flex; gap:8px; font-size:13px; color:var(--text2); margin-top:4px; cursor:pointer;">
-        <input type="checkbox" ${
-          p.meet ? "checked" : ""
-        } onchange="saveMe({meet:this.checked})"> Happy to meet the car somewhere convenient</label>
-    </div>
-  </div>`;
-        }
         return `<div class="pool-row">
-    <div class="avatar" style="background:${
-      p.flex ? "var(--amber-l)" : "var(--blue-l)"
-    }; color:${p.flex ? "var(--amber-d)" : "var(--blue-d)"};">${initials(
+    <div class="avatar" style="background:var(--blue-l); color:var(--blue-d);">${initials(
           p.name
         )}</div>
     <div style="flex:1; min-width:0;">
-      <div style="font-size:13px; font-weight:600;">${esc(
-        p.name
-      )} ${flexBadge} ${meetBadge}</div>
+      <div style="font-size:13px; font-weight:600;">${esc(p.name)}</div>
       <div class="muted">${p.loc ? mapLink(p.loc) : "location TBC"}${
           p.note ? ` &middot; <i>"${esc(p.note)}"</i>` : ""
         }</div>
