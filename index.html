@@ -910,7 +910,7 @@
           <input type="text" id="my-loc" value="${esc(
             p.loc
           )}" placeholder="Full street address" style="flex:1; min-width:0;" onchange="saveMe({loc:this.value.trim()})">
-          <button class="small" onclick="geoLocate(this)" title="Use my current location">Locate me</button>
+          <button class="small" onclick="geoLocate(this,'my-loc')" title="Use my current location">Locate me</button>
         </div>
       </div>
       ${
@@ -1067,7 +1067,7 @@
         });
       }
 
-      function geoLocate(btn) {
+      function geoLocate(btn, inputId) {
         if (!navigator.geolocation) {
           flashBtn(btn, "Not supported");
           return;
@@ -1105,7 +1105,7 @@
             } catch (e) {
               /* keep coordinates — Google Maps understands them fine */
             }
-            const inp = document.getElementById("my-loc");
+            const inp = document.getElementById(inputId);
             if (inp) inp.value = locStr;
             btn.disabled = false;
             btn.textContent = "Locate me";
