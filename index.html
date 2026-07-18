@@ -399,6 +399,12 @@
             }[c])
         );
       }
+      function mapLink(text) {
+        if (!text) return "";
+        return `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+          text,
+        )}" target="_blank" rel="noopener">${esc(text)}</a>`;
+      }
       function hash(s) {
         let h = 5381;
         for (let i = 0; i < s.length; i++) {
