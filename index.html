@@ -68,22 +68,55 @@
 
 <script>
 "use strict";
+
 /* ------------------------------------------------------------------ */
-/* Storage adapter: uses shared persistent storage when available,     */
-/* falls back to in-memory so the file still runs standalone.          */
+/* Storage adapter: interfaces with Deno KV API backend               */
+/* falls back to in-memory if server API is unavailable.              */
 /* ------------------------------------------------------------------ */
 const mem = {};
+
+// Polyfill window.storage to talk to our Deno backend
+window.storage = {
+  async get(key) {
+    const res = await fetch("/api/storage", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "get", key })
+    });
+    return res.json(); // returns { value: ... }
+  },
+  async set(key, value) {
+    const res = await fetch("/api/storage", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "set", key, value })
+    });
+    return res.json(); // returns { success: true }
+  },
+  async list(prefix) {
+    const res = await fetch("/api/storage", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "list", prefix })
+    });
+    return res.json(); // returns { keys: [...] }
+  }
+};
+
 const hasStore = typeof window !== "undefined" && !!window.storage;
+
 async function stGet(key, shared){
   if(!hasStore){ return mem[key] !== undefined ? mem[key] : null; }
   try{ const r = await window.storage.get(key, !!shared); return r ? r.value : null; }
   catch(e){ return null; }
 }
+
 async function stSet(key, value, shared){
   if(!hasStore){ mem[key] = value; return true; }
   try{ await window.storage.set(key, value, !!shared); return true; }
   catch(e){ console.error("storage set failed", e); return false; }
 }
+
 async function stList(prefix, shared){
   if(!hasStore){ return Object.keys(mem).filter(k=>k.startsWith(prefix)); }
   try{ const r = await window.storage.list(prefix, !!shared); return r ? r.keys : []; }
