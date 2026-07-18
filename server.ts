@@ -1,9 +1,16 @@
 // server.ts
-let kv;
-try {
-  kv = await Deno.openKv();
-} catch (e) {
-  console.error("Failed to initialize Deno KV:", e);
+let kv: any = null;
+
+async function getKV() {
+  if (kv) return kv;
+  try {
+    kv = await Deno.openKv();
+    console.log("Successfully connected to Deno KV cloud instance.");
+    return kv;
+  } catch (e) {
+    console.error("Deno KV connection error:", e);
+    return null;
+  }
 }
 
 Deno.serve(async (req) => {
@@ -19,26 +26,22 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Fallback check if KV database failed to load entirely
-  if (url.pathname.startsWith("/api/storage") && !kv) {
-    return new Response(JSON.stringify({ error: "Database initialization failed on host." }), {
-      status: 503,
-      headers: { "Content-Type": "application/json", ...corsHeaders }
-    });
-  }
-
-  // 1. Serve frontend app
+  // 1. Serve frontend app directly from memory string (Eliminates file upload errors)
   if (url.pathname === "/" || url.pathname === "/index.html") {
-    try {
-      const html = await Deno.readTextFile("./index.html");
-      return new Response(html, { headers: { "content-type": "text/html", ...corsHeaders } });
-    } catch {
-      return new Response("index.html not found", { status: 404, headers: corsHeaders });
-    }
+    return new Response(htmlContent, { headers: { "content-type": "text/html", ...corsHeaders } });
   }
 
   // 2. Storage API Endpoint
   if (url.pathname === "/api/storage" && req.method === "POST") {
+    const database = await getKV();
+    
+    if (!database) {
+      return new Response(JSON.stringify({ error: "Database unavailable." }), {
+        status: 503,
+        headers: { "Content-Type": "application/json", ...corsHeaders }
+      });
+    }
+
     try {
       const body = await req.json();
       const { action, key, value, prefix } = body;
@@ -47,21 +50,21 @@ Deno.serve(async (req) => {
       const kvPrefix = Array.isArray(prefix) ? prefix : [prefix];
 
       if (action === "get") {
-        const entry = await kv.get(kvKey);
+        const entry = await database.get(kvKey);
         return new Response(JSON.stringify({ value: entry.value }), {
           headers: { "Content-Type": "application/json", ...corsHeaders }
         });
       }
 
       if (action === "set") {
-        await kv.set(kvKey, value);
+        await database.set(kvKey, value);
         return new Response(JSON.stringify({ success: true }), {
           headers: { "Content-Type": "application/json", ...corsHeaders }
         });
       }
 
       if (action === "list") {
-        const iter = kv.list({ prefix: kvPrefix });
+        const iter = database.list({ prefix: kvPrefix });
         const keys = [];
         for await (const res of iter) {
           keys.push(res.key[res.key.length - 1]);
@@ -80,3 +83,1034 @@ Deno.serve(async (req) => {
 
   return new Response("Not Found", { status: 404, headers: corsHeaders });
 });
+
+// PASTE YOUR ENTIRE HTML FILE INSIDE THESE BACKTICKS
+const htmlContent = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carpool planner</title>
+<style>
+  :root{
+    --bg:#f6f5f2; --card:#ffffff; --border:#e3e1db; --border-strong:#c9c6bd;
+    --text:#26251f; --text2:#6f6d64; --text3:#9c9a90;
+    --teal:#1D9E75; --teal-l:#E1F5EE; --teal-d:#04342C; --teal-m:#0F6E56;
+    --purple:#7F77DD; --purple-l:#EEEDFE; --purple-d:#26215C; --purple-m:#534AB7;
+    --pink:#D4537E; --pink-l:#FBEAF0; --pink-d:#4B1528; --pink-m:#993556;
+    --blue:#378ADD; --blue-l:#E6F1FB; --blue-d:#042C53; --blue-m:#185FA5;
+    --amber:#FAC775; --amber-l:#FAEEDA; --amber-d:#633806; --amber-m:#BA7517;
+    --red:#A32D2D; --red-l:#FCEBEB;
+    --green-l:#EAF3DE; --green-d:#27500A;
+    --radius:8px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif; background:var(--bg); color:var(--text); font-size:15px; line-height:1.5;}
+  .wrap{max-width:1080px; margin:0 auto; padding:24px 16px 64px;}
+  h1{font-size:22px; font-weight:600; margin:0;}
+  h2{font-size:15px; font-weight:600; margin:0;}
+  .card{background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px;}
+  .muted{color:var(--text2); font-size:13px;}
+  .tiny{color:var(--text3); font-size:12px;}
+  label{display:block; font-size:12px; color:var(--text2); margin:0 0 4px;}
+  input[type=text],input[type=password],input[type=number],input[type=date],input[type=time],select{
+    width:100%; padding:8px 10px; font-size:14px; font-family:inherit; color:var(--text);
+    background:#fff; border:1px solid var(--border-strong); border-radius:var(--radius); outline:none;
+  }
+  input:focus,select:focus{border-color:var(--blue); box-shadow:0 0 0 3px var(--blue-l);}
+  button{font-family:inherit; font-size:13px; color:var(--text); background:#fff; border:1px solid var(--border-strong);
+    border-radius:var(--radius); padding:7px 14px; cursor:pointer;}
+  button:hover{background:var(--bg);}
+  button:active{transform:scale(0.98);}
+  button.primary{background:var(--text); color:#fff; border-color:var(--text);}
+  button.primary:hover{background:#3d3c34;}
+  button.danger{color:var(--red); border-color:#e8b8b8;}
+  button.small{font-size:12px; padding:4px 10px;}
+  .field{margin-bottom:12px;}
+  .row{display:flex; gap:8px; align-items:center;}
+  .radio-box{border:1px solid var(--border); border-radius:var(--radius); padding:10px 12px;}
+  .radio-box label.opt{display:flex; align-items:center; gap:8px; font-size:14px; color:var(--text); cursor:pointer; padding:4px 0; margin:0;}
+  .badge{display:inline-block; font-size:11px; border-radius:99px; padding:2px 8px; vertical-align:1px;}
+  .grid{display:grid; grid-template-columns:250px minmax(0,1fr); gap:16px;}
+  @media (max-width:760px){ .grid{grid-template-columns:1fr;} }
+  .cars{display:grid; grid-template-columns:repeat(auto-fit,minmax(290px,1fr)); gap:12px;}
+  .stop{display:flex; align-items:flex-start; gap:8px; padding:2px 0; font-size:12px; color:var(--text2);}
+  .stopnum{width:18px; height:18px; border-radius:50%; font-size:10px; font-weight:600; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px;}
+  .pool-row{display:flex; align-items:center; gap:10px; padding:9px 0; border-top:1px solid var(--border);}
+  .avatar{width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; flex-shrink:0;}
+  .notice{background:var(--amber-l); color:var(--amber-d); border-radius:var(--radius); padding:8px 12px; font-size:13px; margin-bottom:12px;}
+  .hint-warn{color:var(--amber-d); background:var(--amber-l); border-radius:var(--radius); padding:5px 10px; font-size:12px; display:inline-block;}
+  .hint-ok{color:var(--green-d); background:var(--green-l); border-radius:var(--radius); padding:5px 10px; font-size:12px; display:inline-block;}
+  .legend{display:flex; gap:12px; font-size:11px; color:var(--text2); flex-wrap:wrap;}
+  .sw{display:inline-block; width:10px; height:10px; border-radius:3px; vertical-align:-1px;}
+  code{background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:4px 8px; font-size:12px; color:var(--text2);}
+  .seat{cursor:default;}
+  .seat.open{cursor:pointer;}
+  a{color:var(--blue-m);}
+  .topbar{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:16px;}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+
+<script>
+"use strict";
+
+/* ------------------------------------------------------------------ */
+/* Storage adapter: interfaces with Deno KV API backend               */
+/* falls back to in-memory if server API is unavailable.              */
+/* ------------------------------------------------------------------ */
+const mem = {};
+
+// Polyfill window.storage to talk to our Deno backend
+window.storage = {
+  async get(key) {
+    const res = await fetch("/api/storage", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "get", key })
+    });
+    return res.json(); // returns { value: ... }
+  },
+  async set(key, value) {
+    const res = await fetch("/api/storage", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "set", key, value })
+    });
+    return res.json(); // returns { success: true }
+  },
+  async list(prefix) {
+    const res = await fetch("/api/storage", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "list", prefix })
+    });
+    return res.json(); // returns { keys: [...] }
+  }
+};
+
+const hasStore = typeof window !== "undefined" && !!window.storage;
+
+async function stGet(key, shared){
+  if(!hasStore){ return mem[key] !== undefined ? mem[key] : null; }
+  try{ const r = await window.storage.get(key, !!shared); return r ? r.value : null; }
+  catch(e){ return null; }
+}
+
+async function stSet(key, value, shared){
+  if(!hasStore){ mem[key] = value; return true; }
+  try{ await window.storage.set(key, value, !!shared); return true; }
+  catch(e){ console.error("storage set failed", e); return false; }
+}
+
+async function stList(prefix, shared){
+  if(!hasStore){ return Object.keys(mem).filter(k=>k.startsWith(prefix)); }
+  try{ const r = await window.storage.list(prefix, !!shared); return r ? r.keys : []; }
+  catch(e){ return []; }
+}
+
+/* ------------------------------------------------------------------ */
+/* Helpers                                                             */
+/* ------------------------------------------------------------------ */
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function hash(s){ let h=5381; for(let i=0;i<s.length;i++){ h=((h<<5)+h+s.charCodeAt(i))>>>0; } return "h"+h.toString(36); }
+function uid(){ return Math.random().toString(36).slice(2,8); }
+function keyOf(name){ return name.trim().toLowerCase(); }
+function initials(n){ return n.trim().slice(0,2).toUpperCase(); }
+const RAMPS = [
+  {c:"var(--teal)", l:"var(--teal-l)", d:"var(--teal-d)", m:"var(--teal-m)"},
+  {c:"var(--purple)", l:"var(--purple-l)", d:"var(--purple-d)", m:"var(--purple-m)"},
+  {c:"var(--pink)", l:"var(--pink-l)", d:"var(--pink-d)", m:"var(--pink-m)"},
+  {c:"var(--blue)", l:"var(--blue-l)", d:"var(--blue-d)", m:"var(--blue-m)"}
+];
+
+/* ------------------------------------------------------------------ */
+/* App state                                                           */
+/* ------------------------------------------------------------------ */
+let view = "landing";      // landing | event
+let notFound = false;
+let ev = null;             // current event object
+let evId = null;
+let me = null;             // my person key, or null
+let pendingRoleSwitch = null;
+let pendingSeatChange = null;
+let addingPaxFor = null;
+let lastSnapshot = "";
+let pollTimer = null;
+
+/* ------------------------------------------------------------------ */
+/* Data access                                                         */
+/* ------------------------------------------------------------------ */
+async function loadEvent(id){
+  const raw = await stGet("cp-ev-"+id, true);
+  return raw ? JSON.parse(raw) : null;
+}
+async function saveEvent(){
+  lastSnapshot = JSON.stringify(ev);
+  await stSet("cp-ev-"+evId, lastSnapshot, true);
+}
+/* optimistic: apply locally + render instantly, persist in background */
+let persistChain = Promise.resolve();
+let pendingWrites = 0;
+let lastLocalEdit = 0;
+function persist(fn){
+  pendingWrites++;
+  persistChain = persistChain.then(async ()=>{
+    const latest = await loadEvent(evId);
+    if(latest){ fn(latest); ev = latest; }
+    await saveEvent();
+  }).catch(e=>console.error("persist failed", e))
+    .finally(()=>{ pendingWrites--; });
+}
+function saveMe(patch){
+  lastLocalEdit = Date.now();
+  if(!ev.people[me]) ev.people[me] = {};
+  Object.assign(ev.people[me], patch);
+  render();
+  persist(e=>{ if(!e.people[me]) e.people[me] = {}; Object.assign(e.people[me], patch); });
+}
+function mutate(fn){
+  lastLocalEdit = Date.now();
+  fn(ev);
+  render();
+  persist(fn);
+}
+
+/* ------------------------------------------------------------------ */
+/* Derived model                                                       */
+/* ------------------------------------------------------------------ */
+function drivers(){ return Object.keys(ev.people).filter(k=>ev.people[k].role==="drive"); }
+function occupantsOf(dk){
+  return Object.keys(ev.people).filter(k=>k!==dk && ev.people[k].carOf===dk);
+}
+function carStats(dk){
+  const d = ev.people[dk];
+  const occ = occupantsOf(dk);
+  const manual = d.manualPax || [];
+  const cap = Math.max(1, parseInt(d.seats||0,10)||0);
+  return { occ, manual, cap, used: occ.length + manual.length };
+}
+function pool(){
+  return Object.keys(ev.people).filter(k=>{
+    const p = ev.people[k];
+    return p.role!=="drive" && !p.carOf;
+  });
+}
+function seatShortage(){
+  let cap=0; drivers().forEach(dk=>{ cap += carStats(dk).cap; });
+  let need=0; Object.keys(ev.people).forEach(k=>{ if(ev.people[k].role!=="drive") need++; });
+  drivers().forEach(dk=>{ need += (ev.people[dk].manualPax||[]).length; });
+  return need - cap;
+}
+
+/* ------------------------------------------------------------------ */
+/* Rendering                                                           */
+/* ------------------------------------------------------------------ */
+const app = document.getElementById("app");
+function render(){
+  if(view==="landing") renderLanding();
+  else renderEvent();
+}
+
+function renderLanding(){
+  app.innerHTML = `
+    <!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carpool planner</title>
+<style>
+  :root{
+    --bg:#f6f5f2; --card:#ffffff; --border:#e3e1db; --border-strong:#c9c6bd;
+    --text:#26251f; --text2:#6f6d64; --text3:#9c9a90;
+    --teal:#1D9E75; --teal-l:#E1F5EE; --teal-d:#04342C; --teal-m:#0F6E56;
+    --purple:#7F77DD; --purple-l:#EEEDFE; --purple-d:#26215C; --purple-m:#534AB7;
+    --pink:#D4537E; --pink-l:#FBEAF0; --pink-d:#4B1528; --pink-m:#993556;
+    --blue:#378ADD; --blue-l:#E6F1FB; --blue-d:#042C53; --blue-m:#185FA5;
+    --amber:#FAC775; --amber-l:#FAEEDA; --amber-d:#633806; --amber-m:#BA7517;
+    --red:#A32D2D; --red-l:#FCEBEB;
+    --green-l:#EAF3DE; --green-d:#27500A;
+    --radius:8px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif; background:var(--bg); color:var(--text); font-size:15px; line-height:1.5;}
+  .wrap{max-width:1080px; margin:0 auto; padding:24px 16px 64px;}
+  h1{font-size:22px; font-weight:600; margin:0;}
+  h2{font-size:15px; font-weight:600; margin:0;}
+  .card{background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px;}
+  .muted{color:var(--text2); font-size:13px;}
+  .tiny{color:var(--text3); font-size:12px;}
+  label{display:block; font-size:12px; color:var(--text2); margin:0 0 4px;}
+  input[type=text],input[type=password],input[type=number],input[type=date],input[type=time],select{
+    width:100%; padding:8px 10px; font-size:14px; font-family:inherit; color:var(--text);
+    background:#fff; border:1px solid var(--border-strong); border-radius:var(--radius); outline:none;
+  }
+  input:focus,select:focus{border-color:var(--blue); box-shadow:0 0 0 3px var(--blue-l);}
+  button{font-family:inherit; font-size:13px; color:var(--text); background:#fff; border:1px solid var(--border-strong);
+    border-radius:var(--radius); padding:7px 14px; cursor:pointer;}
+  button:hover{background:var(--bg);}
+  button:active{transform:scale(0.98);}
+  button.primary{background:var(--text); color:#fff; border-color:var(--text);}
+  button.primary:hover{background:#3d3c34;}
+  button.danger{color:var(--red); border-color:#e8b8b8;}
+  button.small{font-size:12px; padding:4px 10px;}
+  .field{margin-bottom:12px;}
+  .row{display:flex; gap:8px; align-items:center;}
+  .radio-box{border:1px solid var(--border); border-radius:var(--radius); padding:10px 12px;}
+  .radio-box label.opt{display:flex; align-items:center; gap:8px; font-size:14px; color:var(--text); cursor:pointer; padding:4px 0; margin:0;}
+  .badge{display:inline-block; font-size:11px; border-radius:99px; padding:2px 8px; vertical-align:1px;}
+  .grid{display:grid; grid-template-columns:250px minmax(0,1fr); gap:16px;}
+  @media (max-width:760px){ .grid{grid-template-columns:1fr;} }
+  .cars{display:grid; grid-template-columns:repeat(auto-fit,minmax(290px,1fr)); gap:12px;}
+  .stop{display:flex; align-items:flex-start; gap:8px; padding:2px 0; font-size:12px; color:var(--text2);}
+  .stopnum{width:18px; height:18px; border-radius:50%; font-size:10px; font-weight:600; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px;}
+  .pool-row{display:flex; align-items:center; gap:10px; padding:9px 0; border-top:1px solid var(--border);}
+  .avatar{width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; flex-shrink:0;}
+  .notice{background:var(--amber-l); color:var(--amber-d); border-radius:var(--radius); padding:8px 12px; font-size:13px; margin-bottom:12px;}
+  .hint-warn{color:var(--amber-d); background:var(--amber-l); border-radius:var(--radius); padding:5px 10px; font-size:12px; display:inline-block;}
+  .hint-ok{color:var(--green-d); background:var(--green-l); border-radius:var(--radius); padding:5px 10px; font-size:12px; display:inline-block;}
+  .legend{display:flex; gap:12px; font-size:11px; color:var(--text2); flex-wrap:wrap;}
+  .sw{display:inline-block; width:10px; height:10px; border-radius:3px; vertical-align:-1px;}
+  code{background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:4px 8px; font-size:12px; color:var(--text2);}
+  .seat{cursor:default;}
+  .seat.open{cursor:pointer;}
+  a{color:var(--blue-m);}
+  .topbar{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:16px;}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+
+<script>
+"use strict";
+
+/* ------------------------------------------------------------------ */
+/* Storage adapter: interfaces with Deno KV API backend               */
+/* falls back to in-memory if server API is unavailable.              */
+/* ------------------------------------------------------------------ */
+const mem = {};
+
+// Polyfill window.storage to talk to our Deno backend
+window.storage = {
+  async get(key) {
+    const res = await fetch("/api/storage", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "get", key })
+    });
+    return res.json(); // returns { value: ... }
+  },
+  async set(key, value) {
+    const res = await fetch("/api/storage", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "set", key, value })
+    });
+    return res.json(); // returns { success: true }
+  },
+  async list(prefix) {
+    const res = await fetch("/api/storage", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "list", prefix })
+    });
+    return res.json(); // returns { keys: [...] }
+  }
+};
+
+const hasStore = typeof window !== "undefined" && !!window.storage;
+
+async function stGet(key, shared){
+  if(!hasStore){ return mem[key] !== undefined ? mem[key] : null; }
+  try{ const r = await window.storage.get(key, !!shared); return r ? r.value : null; }
+  catch(e){ return null; }
+}
+
+async function stSet(key, value, shared){
+  if(!hasStore){ mem[key] = value; return true; }
+  try{ await window.storage.set(key, value, !!shared); return true; }
+  catch(e){ console.error("storage set failed", e); return false; }
+}
+
+async function stList(prefix, shared){
+  if(!hasStore){ return Object.keys(mem).filter(k=>k.startsWith(prefix)); }
+  try{ const r = await window.storage.list(prefix, !!shared); return r ? r.keys : []; }
+  catch(e){ return []; }
+}
+
+/* ------------------------------------------------------------------ */
+/* Helpers                                                             */
+/* ------------------------------------------------------------------ */
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function hash(s){ let h=5381; for(let i=0;i<s.length;i++){ h=((h<<5)+h+s.charCodeAt(i))>>>0; } return "h"+h.toString(36); }
+function uid(){ return Math.random().toString(36).slice(2,8); }
+function keyOf(name){ return name.trim().toLowerCase(); }
+function initials(n){ return n.trim().slice(0,2).toUpperCase(); }
+const RAMPS = [
+  {c:"var(--teal)", l:"var(--teal-l)", d:"var(--teal-d)", m:"var(--teal-m)"},
+  {c:"var(--purple)", l:"var(--purple-l)", d:"var(--purple-d)", m:"var(--purple-m)"},
+  {c:"var(--pink)", l:"var(--pink-l)", d:"var(--pink-d)", m:"var(--pink-m)"},
+  {c:"var(--blue)", l:"var(--blue-l)", d:"var(--blue-d)", m:"var(--blue-m)"}
+];
+
+/* ------------------------------------------------------------------ */
+/* App state                                                           */
+/* ------------------------------------------------------------------ */
+let view = "landing";      // landing | event
+let notFound = false;
+let ev = null;             // current event object
+let evId = null;
+let me = null;             // my person key, or null
+let pendingRoleSwitch = null;
+let pendingSeatChange = null;
+let addingPaxFor = null;
+let lastSnapshot = "";
+let pollTimer = null;
+
+/* ------------------------------------------------------------------ */
+/* Data access                                                         */
+/* ------------------------------------------------------------------ */
+async function loadEvent(id){
+  const raw = await stGet("cp-ev-"+id, true);
+  return raw ? JSON.parse(raw) : null;
+}
+async function saveEvent(){
+  lastSnapshot = JSON.stringify(ev);
+  await stSet("cp-ev-"+evId, lastSnapshot, true);
+}
+/* optimistic: apply locally + render instantly, persist in background */
+let persistChain = Promise.resolve();
+let pendingWrites = 0;
+let lastLocalEdit = 0;
+function persist(fn){
+  pendingWrites++;
+  persistChain = persistChain.then(async ()=>{
+    const latest = await loadEvent(evId);
+    if(latest){ fn(latest); ev = latest; }
+    await saveEvent();
+  }).catch(e=>console.error("persist failed", e))
+    .finally(()=>{ pendingWrites--; });
+}
+function saveMe(patch){
+  lastLocalEdit = Date.now();
+  if(!ev.people[me]) ev.people[me] = {};
+  Object.assign(ev.people[me], patch);
+  render();
+  persist(e=>{ if(!e.people[me]) e.people[me] = {}; Object.assign(e.people[me], patch); });
+}
+function mutate(fn){
+  lastLocalEdit = Date.now();
+  fn(ev);
+  render();
+  persist(fn);
+}
+
+/* ------------------------------------------------------------------ */
+/* Derived model                                                       */
+/* ------------------------------------------------------------------ */
+function drivers(){ return Object.keys(ev.people).filter(k=>ev.people[k].role==="drive"); }
+function occupantsOf(dk){
+  return Object.keys(ev.people).filter(k=>k!==dk && ev.people[k].carOf===dk);
+}
+function carStats(dk){
+  const d = ev.people[dk];
+  const occ = occupantsOf(dk);
+  const manual = d.manualPax || [];
+  const cap = Math.max(1, parseInt(d.seats||0,10)||0);
+  return { occ, manual, cap, used: occ.length + manual.length };
+}
+function pool(){
+  return Object.keys(ev.people).filter(k=>{
+    const p = ev.people[k];
+    return p.role!=="drive" && !p.carOf;
+  });
+}
+function seatShortage(){
+  let cap=0; drivers().forEach(dk=>{ cap += carStats(dk).cap; });
+  let need=0; Object.keys(ev.people).forEach(k=>{ if(ev.people[k].role!=="drive") need++; });
+  drivers().forEach(dk=>{ need += (ev.people[dk].manualPax||[]).length; });
+  return need - cap;
+}
+
+/* ------------------------------------------------------------------ */
+/* Rendering                                                           */
+/* ------------------------------------------------------------------ */
+const app = document.getElementById("app");
+function render(){
+  if(view==="landing") renderLanding();
+  else renderEvent();
+}
+
+function renderLanding(){
+  app.innerHTML = `
+    <div class="topbar"><h1>Carpool planner</h1></div>
+    ${hasStore?"":`<div class="notice">Shared storage isn't available here — running in demo mode, data won't persist.</div>`}
+    ${notFound?`<div class="notice">That trip link didn't match anything — it may be mistyped. Create a new trip below.</div>`:""}
+    <div class="card" style="max-width:420px;">
+      <h2 style="margin-bottom:4px;">Create a trip</h2>
+      <p class="tiny" style="margin:0 0 12px;">You'll get a unique link to share — anyone with it can join.</p>
+      <div class="field"><label>Trip name</label><input type="text" id="c-name" placeholder="Torquay surf trip"></div>
+      <div class="field"><label>Date</label><input type="date" id="c-date"></div>
+      <div class="field"><label>Destination</label><input type="text" id="c-dest" placeholder="Torquay"></div>
+      <div class="field"><label>Aim to arrive by (optional)</label><input type="time" id="c-arrive"></div>
+      <button class="primary" style="width:100%;" onclick="createTrip()">Create trip</button>
+    </div>`;
+}
+
+async function createTrip(){
+  const name = document.getElementById("c-name").value.trim();
+  if(!name){ document.getElementById("c-name").focus(); return; }
+  const id = uid() + uid();
+  ev = { id, name,
+    date: document.getElementById("c-date").value,
+    dest: document.getElementById("c-dest").value.trim(),
+    arriveBy: document.getElementById("c-arrive").value,
+    people: {} };
+  evId = id;
+  await saveEvent();
+  try{ history.replaceState(null, "", "#"+id); }catch(e){}
+  await openEvent(id);
+}
+
+async function openEvent(id){
+  ev = await loadEvent(id);
+  if(!ev){ notFound = true; view = "landing"; render(); return; }
+  notFound = false;
+  evId = id;
+  lastSnapshot = JSON.stringify(ev);
+  const sess = await stGet("cp-me-"+id, false);
+  me = sess && ev.people[sess] ? sess : null;
+  view = "event";
+  startPolling();
+  render();
+}
+
+function backToLanding(){
+  view = "landing"; ev = null; evId = null; me = null; notFound = false;
+  stopPolling();
+  try{ history.replaceState(null, "", location.pathname + location.search); }catch(e){}
+  render();
+}
+
+/* ---------- event view ---------- */
+function renderEvent(){
+  const short = seatShortage();
+  const flexFolk = pool().filter(k=>ev.people[k].flex);
+  let shortLine = "";
+  if(drivers().length && short>0){
+    shortLine = flexFolk.length
+      ? `<span class="hint-warn">${short} seat${short>1?"s":""} short — ${esc(ev.people[flexFolk[0]].name)} could drive</span>`
+      : `<span class="hint-warn">${short} seat${short>1?"s":""} short</span>`;
+  }
+  app.innerHTML = `
+    <div class="topbar">
+      <div>
+        <h1>${esc(ev.name)}</h1>
+        <p class="muted" style="margin:4px 0 0;">${esc(ev.date||"date TBC")}${ev.dest?` &middot; to ${esc(ev.dest)}`:""}${ev.arriveBy?` &middot; aim to arrive by <b>${esc(ev.arriveBy)}</b>`:""}</p>
+      </div>
+      <div class="row">
+        <code id="share-code">#${esc(evId)}</code>
+        <button class="small" onclick="copyShare(this)">Copy link</button>
+        <button class="small" onclick="backToLanding()">New trip</button>
+      </div>
+    </div>
+    <div class="grid">
+      <div>${me ? detailsPanel() : signInPanel()}</div>
+      <div>
+        <div class="row" style="justify-content:space-between; margin-bottom:10px; flex-wrap:wrap;">
+          <h2>Cars ${carsSummary()}</h2>
+          <div class="legend">
+            <span><span class="sw" style="background:var(--teal);"></span> signed up</span>
+            <span><span class="sw" style="background:var(--amber);"></span> added by driver</span>
+            <span><span class="sw" style="border:1.5px dashed var(--border-strong);"></span> open</span>
+          </div>
+        </div>
+        ${drivers().length ? `<div class="cars">${drivers().map((dk,i)=>carCard(dk,i)).join("")}</div>`
+          : `<div class="card muted">No cars yet — the first person to pick "I can drive" creates one.</div>`}
+        <div class="card" style="margin-top:14px;">
+          <div class="row" style="justify-content:space-between; flex-wrap:wrap;">
+            <h2>Not in a car yet (${pool().length})</h2>${shortLine}
+          </div>
+          ${pool().length ? pool().map(poolRow).join("") : `<p class="muted" style="margin:8px 0 0;">Everyone's sorted.</p>`}
+        </div>
+      </div>
+    </div>`;
+}
+
+function carsSummary(){
+  if(!drivers().length) return "";
+  let cap=0, used=0;
+  drivers().forEach(dk=>{ const s=carStats(dk); cap+=s.cap; used+=s.used; });
+  return `<span class="muted" style="font-weight:400;">— ${used} of ${cap} seats filled</span>`;
+}
+
+function copyShare(btn){
+  const text = typeof location!=="undefined" ? (location.href.split("#")[0] + "#" + evId) : "#"+evId;
+  try{ navigator.clipboard.writeText(text); }catch(e){}
+  btn.textContent = "Copied";
+  setTimeout(()=>{ btn.textContent = "Copy link"; }, 1500);
+}
+
+/* ---------- sign in ---------- */
+function signInPanel(){
+  return `<div class="card">
+    <h2 style="margin-bottom:12px;">Sign in</h2>
+    <div class="field"><label>Your name</label><input type="text" id="si-name"></div>
+    <div class="field"><label>Password (optional)</label><input type="password" id="si-pw"></div>
+    <p class="tiny" id="si-err" style="color:var(--red); margin:0 0 8px; display:none;"></p>
+    <button class="primary" style="width:100%;" onclick="signIn()">Sign in</button>
+    <p class="tiny" style="margin:10px 0 0; line-height:1.6;">Name and password are only for this trip.<br>New here? Just pick a name.<br>Returning? Use the same name and password.</p>
+  </div>`;
+}
+
+async function signIn(){
+  const name = document.getElementById("si-name").value.trim();
+  const pw = document.getElementById("si-pw").value;
+  const err = document.getElementById("si-err");
+  if(!name){ document.getElementById("si-name").focus(); return; }
+  const k = keyOf(name);
+  const latest = await loadEvent(evId);
+  if(latest) ev = latest;
+  const existing = ev.people[k];
+  if(existing && existing.pw && existing.pw !== hash(pw)){
+    err.textContent = "That name's taken and the password doesn't match. Are you them? Try again, or pick another name.";
+    err.style.display = "block";
+    return;
+  }
+  if(!existing){
+    ev.people[k] = { name, pw: pw ? hash(pw) : null, role: null, flex: false,
+      seats: 4, loc: "", meet: false, note: "", leaveAt: "", carOf: null, manualPax: [], paxOrder: [] };
+    await saveEvent();
+  } else if(pw && !existing.pw){
+    existing.pw = hash(pw);
+    await saveEvent();
+  }
+  me = k;
+  await stSet("cp-me-"+evId, k, false);
+  render();
+}
+
+async function signOut(){
+  me = null;
+  await stSet("cp-me-"+evId, "", false);
+  render();
+}
+
+/* ---------- details panel ---------- */
+function detailsPanel(){
+  const p = ev.people[me];
+  const isDrive = p.role==="drive";
+  const isRide = p.role==="ride";
+  const showSeats = isDrive || (isRide && p.flex);
+  const stats = isDrive ? carStats(me) : null;
+  let confirmBlock = "";
+  if(pendingRoleSwitch){
+    confirmBlock = `<div class="notice">Switching to "${pendingRoleSwitch==='ride'?'I need a ride':'driver'}" removes your car — your ${carStats(me).used} passenger${carStats(me).used>1?"s":""} go back to the pool.
+      <div class="row" style="margin-top:8px;">
+        <button class="small danger" onclick="confirmRoleSwitch()">Switch anyway</button>
+        <button class="small" onclick="cancelRoleSwitch()">Cancel</button>
+      </div></div>`;
+  }
+  if(pendingSeatChange != null){
+    const excess = carStats(me).used - pendingSeatChange;
+    confirmBlock += `<div class="notice">Dropping to ${pendingSeatChange} seat${pendingSeatChange>1?"s":""} removes your last ${excess} passenger${excess>1?"s":""} — they go back to the pool.
+      <div class="row" style="margin-top:8px;">
+        <button class="small danger" onclick="confirmSeatChange()">Reduce seats</button>
+        <button class="small" onclick="pendingSeatChange=null; render();">Cancel</button>
+      </div></div>`;
+  }
+  return `<div class="card">
+    <div class="row" style="justify-content:space-between; margin-bottom:12px;">
+      <div class="row">
+        <div class="avatar" style="background:var(--blue-l); color:var(--blue-d);">${initials(p.name)}</div>
+        <span style="font-weight:600; font-size:14px;">${esc(p.name)}</span>
+      </div>
+      <button class="small" onclick="signOut()">Sign out</button>
+    </div>
+    <div style="border-top:1px solid var(--border); padding-top:12px;">
+      ${manualMatches().map(x=>`<div class="notice">${esc(ev.people[x.dk].name)} added "${esc(x.m.n)}"${x.m.loc?` (${esc(x.m.loc)})`:""} to their car — is that you?
+        <div class="row" style="margin-top:8px;">
+          <button class="small primary" onclick="claimManual('${x.dk}','${x.mid}')">Take the seat</button>
+          <button class="small" onclick="dismissManual('${x.mid}')">Not me</button>
+        </div></div>`).join("")}
+      ${confirmBlock}
+      <div class="radio-box" style="margin-bottom:12px;">
+        <label class="opt"><input type="radio" name="role" ${isDrive?"checked":""} onchange="setRole('drive')"> I can drive</label>
+        <label class="opt"><input type="radio" name="role" ${isRide?"checked":""} onchange="setRole('ride')"> I need a ride</label>
+        ${isRide ? `<label class="opt" style="margin-left:24px; font-size:13px; color:var(--text2);">
+            <input type="checkbox" ${p.flex?"checked":""} onchange="saveMe({flex:this.checked})"> &hellip;but I can drive if needed</label>`:""}
+        ${showSeats ? `<div style="margin-top:8px; padding-top:8px; border-top:1px solid var(--border);">
+          <label>${isDrive?"Passenger seats (excl. you) *":"Seats if you end up driving"}</label>
+          <input type="number" min="1" max="12" value="${esc(p.seats)}" onchange="setSeats(this)">
+        </div>`:""}
+      </div>
+      <div class="field">
+        <label>${isDrive?"Departing from *":"Pickup location *"}</label>
+        <div class="row">
+          <input type="text" id="my-loc" value="${esc(p.loc)}" placeholder="Address or suburb" style="flex:1; min-width:0;" onchange="saveMe({loc:this.value.trim()})">
+          <button class="small" onclick="geoLocate(this)" title="Use my current location">Locate me</button>
+        </div>
+      </div>
+      ${!isDrive ? `<label class="opt" style="display:flex; gap:8px; font-size:13px; color:var(--text2); margin-bottom:10px; cursor:pointer;">
+        <input type="checkbox" ${p.meet?"checked":""} onchange="saveMe({meet:this.checked})"> Happy to meet the car somewhere convenient</label>`:""}
+      ${isDrive ? `<div class="field"><label>Leaving at</label>
+        <input type="time" value="${esc(p.leaveAt)}" onchange="saveMe({leaveAt:this.value})">
+        ${ev.arriveBy?`<p class="tiny" style="margin:4px 0 0;">Event target: arrive by ${esc(ev.arriveBy)}.</p>`:""}
+      </div>`:""}
+      <div class="field"><label>Note for the group</label>
+        <input type="text" value="${esc(p.note)}" placeholder="Boards on roof" onchange="saveMe({note:this.value.trim()})"></div>
+      ${p.carOf && ev.people[p.carOf] ? `<div class="field">
+        <p class="muted" style="margin:0 0 6px;">You're in ${esc(ev.people[p.carOf].name)}'s car.</p>
+        <button class="small danger" onclick="leaveCar()">Leave this car</button></div>`:""}
+      <p class="tiny">Changes save automatically.</p>
+    </div>
+  </div>`;
+}
+
+function setRole(role){
+  const p = ev.people[me];
+  if(p.role==="drive" && role!=="drive" && carStats(me).used>0){
+    pendingRoleSwitch = role;
+    render();
+    return;
+  }
+  applyRole(role);
+}
+async function applyRole(role){
+  await mutate(e=>{
+    const p = e.people[me];
+    p.role = role;
+    if(role==="drive"){ p.carOf = null; p.flex = false; }
+  });
+}
+async function confirmRoleSwitch(){
+  const role = pendingRoleSwitch;
+  pendingRoleSwitch = null;
+  await mutate(e=>{
+    Object.keys(e.people).forEach(k=>{ if(e.people[k].carOf===me) e.people[k].carOf = null; });
+    const p = e.people[me];
+    p.role = role; p.manualPax = []; p.paxOrder = [];
+  });
+}
+function cancelRoleSwitch(){ pendingRoleSwitch = null; render(); }
+
+async function leaveCar(){ await saveMe({carOf:null}); }
+
+/* ---- claiming driver-added entries that match my name ---- */
+function manualMatches(){
+  const p = ev.people[me];
+  if(!p || p.role==="drive" || p.carOf) return [];
+  const dismissed = p.dismissed || [];
+  const out = [];
+  drivers().forEach(dk=>{
+    (ev.people[dk].manualPax||[]).forEach((m,i)=>{
+      const mid = m.id || ("i"+i);
+      if(keyOf(m.n)===me && !dismissed.includes(mid)) out.push({dk, mid, m});
+    });
+  });
+  return out;
+}
+function claimManual(dk, mid){
+  mutate(e=>{
+    const d = e.people[dk];
+    const list = d.manualPax || [];
+    const idx = list.findIndex((m,i)=>(m.id||("i"+i))===mid);
+    if(idx < 0) return;
+    const entry = list[idx];
+    list.splice(idx, 1);
+    const p = e.people[me];
+    p.carOf = dk;
+    if(!p.loc && entry.loc) p.loc = entry.loc;
+    if(!p.role) p.role = "ride";
+    d.paxOrder = (d.paxOrder||[]).map(x=> x==="m:"+mid ? "p:"+me : x);
+  });
+}
+function dismissManual(mid){
+  const p = ev.people[me];
+  saveMe({dismissed: [...(p.dismissed||[]), mid]});
+}
+
+function setSeats(inp){
+  const v = Math.max(1, Math.min(12, parseInt(inp.value,10)||1));
+  const p = ev.people[me];
+  if(p.role==="drive" && v < carStats(me).used){
+    pendingSeatChange = v;
+    render();
+    return;
+  }
+  saveMe({seats: v});
+}
+function confirmSeatChange(){
+  const v = pendingSeatChange;
+  pendingSeatChange = null;
+  mutate(e=>{
+    const d = e.people[me];
+    d.seats = v;
+    let guard = 20;
+    while(guard-- > 0){
+      const order = orderedStopsIn(e, me);
+      if(order.length <= v) break;
+      const id = order[order.length - 1];
+      if(id.startsWith("p:")){
+        const p = e.people[id.slice(2)];
+        if(p) p.carOf = null;
+      } else {
+        const key = id.slice(2);
+        d.manualPax = (d.manualPax||[]).filter((m,i)=>(m.id||("i"+i)) !== key);
+      }
+      d.paxOrder = (d.paxOrder||[]).filter(x=>x !== id);
+    }
+  });
+}
+
+function geoLocate(btn){
+  if(!navigator.geolocation){ flashBtn(btn, "Not supported"); return; }
+  btn.textContent = "Locating\u2026"; btn.disabled = true;
+  navigator.geolocation.getCurrentPosition(async pos=>{
+    const lat = pos.coords.latitude, lng = pos.coords.longitude;
+    let locStr = lat.toFixed(4) + ", " + lng.toFixed(4);
+    try{
+      const r = await fetch("https://api.bigdatacloud.net/data/reverse-geocode-client?latitude="+lat+"&longitude="+lng+"&localityLanguage=en");
+      const d = await r.json();
+      if(d && (d.locality || d.city)) locStr = d.locality || d.city;
+    }catch(e){ /* keep coordinates — Google Maps understands them fine */ }
+    const inp = document.getElementById("my-loc");
+    if(inp) inp.value = locStr;
+    btn.disabled = false; btn.textContent = "Locate me";
+    saveMe({loc: locStr});
+  }, err=>{
+    btn.disabled = false;
+    flashBtn(btn, err && err.code===1 ? "No permission" : "Couldn't locate");
+  }, {timeout: 8000});
+}
+function flashBtn(btn, msg){
+  const orig = "Locate me";
+  btn.textContent = msg;
+  setTimeout(()=>{ if(btn.isConnected) btn.textContent = orig; }, 2000);
+}
+
+/* ---------- cars ---------- */
+function orderedStops(dk){
+  const d = ev.people[dk];
+  const occ = occupantsOf(dk);
+  const manual = d.manualPax || [];
+  const ids = [];
+  occ.forEach(k=>ids.push("p:"+k));
+  manual.forEach((m,i)=>ids.push("m:"+(m.id||("i"+i))));
+  const order = (d.paxOrder||[]).filter(id=>ids.includes(id));
+  ids.forEach(id=>{ if(!order.includes(id)) order.push(id); });
+  return order;
+}
+function stopInfo(dk, id){
+  if(id.startsWith("p:")){
+    const p = ev.people[id.slice(2)];
+    return p ? {name:p.name, loc:p.loc, manual:false} : null;
+  }
+  const key = id.slice(2);
+  const m = (ev.people[dk].manualPax||[]).find((mm,i)=>(mm.id||("i"+i))===key);
+  return m ? {name:m.n, loc:m.loc, manual:true} : null;
+}
+
+function carCard(dk, i){
+  const d = ev.people[dk];
+  const ramp = RAMPS[i % RAMPS.length];
+  const stats = carStats(dk);
+  const mine = me===dk;
+  const stops = orderedStops(dk);
+  const stopRows = stops.map((id,idx)=>{
+    const s = stopInfo(dk,id);
+    if(!s) return "";
+    const arrows = mine ? `<span style="margin-left:auto; white-space:nowrap;">
+        ${idx>0?`<button class="small" style="padding:0 6px;" onclick="moveStop('${dk}','${id}',-1)" aria-label="Earlier">&uarr;</button>`:""}
+        ${idx<stops.length-1?`<button class="small" style="padding:0 6px;" onclick="moveStop('${dk}','${id}',1)" aria-label="Later">&darr;</button>`:""}
+      </span>` : "";
+    return `<div class="stop"><span class="stopnum" style="background:${ramp.l}; color:${ramp.d};">${idx+1}</span>
+      <span>${esc(s.name)}${s.loc?` — ${esc(s.loc)}`:""}${s.manual?` <span style="color:var(--amber-m);">(added by ${esc(d.name)})</span>`:""}</span>${arrows}</div>`;
+  }).join("");
+  const mapsStops = [d.loc, ...stops.map(id=>{const s=stopInfo(dk,id); return s&&s.loc;}).filter(Boolean), ev.dest].filter(Boolean);
+  const mapsUrl = "https://www.google.com/maps/dir/" + mapsStops.map(encodeURIComponent).join("/");
+  let addForm = "";
+  if(addingPaxFor===dk && mine){
+    addForm = `<div style="margin-top:8px; padding:8px; background:var(--bg); border-radius:var(--radius);">
+      <div class="row" style="margin-bottom:6px;">
+        <input type="text" id="mp-name" placeholder="Name" style="flex:1; min-width:0;">
+        <input type="text" id="mp-loc" placeholder="Suburb" style="flex:1; min-width:0;">
+      </div>
+      <div class="row">
+        <button class="small primary" onclick="addManualPax('${dk}')">Add</button>
+        <button class="small" onclick="addingPaxFor=null; render();">Cancel</button>
+      </div>
+      <p class="tiny" style="margin:6px 0 0;">For someone with plans who won't sign up here.</p>
+    </div>`;
+  }
+  return `<div class="card" style="padding:12px;">
+    <div class="row" style="justify-content:space-between; margin-bottom:2px;">
+      <div>
+        <span style="font-weight:600; font-size:14px;">${esc(d.name)}'s car &middot; ${stats.cap+1} seats</span>
+        <p class="muted" style="margin:0;">${esc(d.loc||"start TBC")}${ev.dest?` → ${esc(ev.dest)}`:""}${d.leaveAt?` &middot; departs <b style="color:var(--text);">${esc(d.leaveAt)}</b>`:" &middot; time TBC"}</p>
+      </div>
+      <span class="badge" style="background:${ramp.l}; color:${ramp.d};">${stats.used}/${stats.cap}</span>
+    </div>
+    ${d.note?`<p class="muted" style="font-style:italic; margin:4px 0 6px;">"${esc(d.note)}"</p>`:""}
+    <div style="display:flex; gap:12px; align-items:flex-start; margin-top:6px;">
+      <div style="flex-shrink:0;">${carSVG(dk, ramp)}</div>
+      <div style="flex:1; min-width:0;">
+        <p class="tiny" style="margin:0 0 4px;">Pickup order${mine?" — use arrows to reorder":""}</p>
+        <div class="stop"><span class="stopnum" style="background:${ramp.c}; color:#fff;">S</span><span>${esc(d.name)} — ${esc(d.loc||"TBC")} (start)</span></div>
+        ${stopRows}
+        ${ev.dest?`<div class="stop"><span class="stopnum" style="background:${ramp.c}; color:#fff;">&#9873;</span><span style="color:var(--text);">${esc(ev.dest)}</span></div>`:""}
+        ${mine?`<button class="small" style="margin-top:6px;" onclick="addingPaxFor='${dk}'; render();">+ Add passenger</button>`:""}
+        ${addForm}
+      </div>
+    </div>
+    <div class="row" style="margin-top:10px;">
+      <button class="small" style="flex:1;" onclick="window.open('${mapsUrl}','_blank')">Open in Google Maps</button>
+    </div>
+  </div>`;
+}
+
+function seatLayout(count){
+  const pos = [[60,44],[100,44]];
+  let y = 96, remaining = count - 2;
+  while(remaining > 0){
+    const inRow = Math.min(3, remaining);
+    const xs = inRow===1 ? [80] : inRow===2 ? [56,104] : [40,80,120];
+    xs.forEach(x=>pos.push([x,y]));
+    remaining -= inRow; y += 48;
+  }
+  return {pos: pos.slice(0,count), height: y-48+36};
+}
+
+function carSVG(dk, ramp){
+  const d = ev.people[dk];
+  const stats = carStats(dk);
+  const total = stats.cap + 1;
+  const {pos, height} = seatLayout(total);
+  const stops = orderedStops(dk);
+  const cells = [{t:"driver", n:d.name}];
+  stops.forEach(id=>{
+    const s = stopInfo(dk,id);
+    if(s) cells.push({t: s.manual?"manual":"taken", n:s.name});
+  });
+  while(cells.length < total) cells.push({t:"open"});
+  const canClaim = me && me!==dk && ev.people[me].role!=="drive" && !ev.people[me].carOf && stats.used < stats.cap;
+  const seats = pos.map((p,i)=>{
+    const c = cells[i];
+    const open = c.t==="open";
+    const manual = c.t==="manual";
+    const fill = open ? "#fff" : manual ? "var(--amber)" : ramp.c;
+    const stroke = open ? "var(--border-strong)" : manual ? "var(--amber-m)" : ramp.c;
+    const label = open ? "" : initials(c.n);
+    const click = open && canClaim ? `onclick="claimSeat('${dk}')"` : "";
+    return `<g class="seat ${open&&canClaim?"open":""}" ${click}>
+      <rect x="${p[0]-16}" y="${p[1]-16}" width="32" height="32" rx="8" fill="${fill}" stroke="${stroke}" stroke-width="1.5" ${open?'stroke-dasharray="4 3"':''}/>
+      ${open ? `<text x="${p[0]}" y="${p[1]+5}" text-anchor="middle" font-size="14" fill="var(--text3)">${canClaim?"+":""}</text>`
+             : `<text x="${p[0]}" y="${p[1]+4}" text-anchor="middle" font-size="11" font-weight="600" fill="${manual?"var(--amber-d)":"#fff"}">${esc(label)}</text>`}
+      ${i===0?`<text x="${p[0]}" y="${p[1]-21}" text-anchor="middle" font-size="9" fill="${ramp.m}">driver</text>`:""}
+    </g>`;
+  }).join("");
+  const h = height + 14;
+  return `<svg viewBox="0 0 160 ${h}" width="120" height="${Math.round(h*0.75)}" role="img" aria-label="${esc(d.name)}'s car seat map">
+    <rect x="20" y="4" width="120" height="${h-8}" rx="28" fill="${ramp.l}" stroke="${ramp.m}" stroke-width="1.5"/>
+    <path d="M 34 62 Q 80 50 126 62" fill="none" stroke="${ramp.m}" stroke-width="1.5" opacity="0.5"/>
+    ${seats}
+  </svg>`;
+}
+
+async function claimSeat(dk){
+  await mutate(e=>{
+    const p = e.people[me];
+    const s = carStatsIn(e, dk);
+    if(p && p.role!=="drive" && !p.carOf && s.used < s.cap){ p.carOf = dk; }
+  });
+}
+function carStatsIn(e, dk){
+  const d = e.people[dk];
+  const occ = Object.keys(e.people).filter(k=>k!==dk && e.people[k].carOf===dk);
+  const manual = d.manualPax || [];
+  const cap = Math.max(1, parseInt(d.seats||0,10)||0);
+  return { cap, used: occ.length + manual.length };
+}
+
+async function addManualPax(dk){
+  const n = document.getElementById("mp-name").value.trim();
+  const loc = document.getElementById("mp-loc").value.trim();
+  if(!n) return;
+  addingPaxFor = null;
+  await mutate(e=>{
+    const d = e.people[dk];
+    if(!d.manualPax) d.manualPax = [];
+    if(carStatsIn(e,dk).used < carStatsIn(e,dk).cap) d.manualPax.push({id: uid(), n, loc});
+  });
+}
+
+async function moveStop(dk, id, dir){
+  await mutate(e=>{
+    const d = e.people[dk];
+    const order = orderedStopsIn(e, dk);
+    const i = order.indexOf(id);
+    const j = i + dir;
+    if(i<0 || j<0 || j>=order.length) return;
+    order.splice(i,1); order.splice(j,0,id);
+    d.paxOrder = order;
+  });
+}
+function orderedStopsIn(e, dk){
+  const d = e.people[dk];
+  const occ = Object.keys(e.people).filter(k=>k!==dk && e.people[k].carOf===dk);
+  const ids = occ.map(k=>"p:"+k).concat((d.manualPax||[]).map((m,i)=>"m:"+(m.id||("i"+i))));
+  const order = (d.paxOrder||[]).filter(x=>ids.includes(x));
+  ids.forEach(x=>{ if(!order.includes(x)) order.push(x); });
+  return order;
+}
+
+/* ---------- pool ---------- */
+function poolRow(k){
+  const p = ev.people[k];
+  const undecided = !p.role;
+  const flexBadge = p.flex ? `<span class="badge" style="background:var(--amber-l); color:var(--amber-d);">can drive &middot; ${esc(p.seats)} seats</span>` : "";
+  const meetBadge = p.meet ? `<span class="badge" style="background:var(--blue-l); color:var(--blue-d);">will meet anywhere</span>` : "";
+  const undBadge = undecided ? `<span class="badge" style="background:var(--bg); color:var(--text2); border:1px solid var(--border);">undecided</span>` : "";
+  return `<div class="pool-row">
+    <div class="avatar" style="background:${p.flex?"var(--amber-l)":"var(--blue-l)"}; color:${p.flex?"var(--amber-d)":"var(--blue-d)"};">${initials(p.name)}</div>
+    <div style="flex:1; min-width:0;">
+      <div style="font-size:13px; font-weight:600;">${esc(p.name)} ${flexBadge} ${meetBadge} ${undBadge}</div>
+      <div class="muted">${p.loc?esc(p.loc):"location TBC"}${p.note?` &middot; <i>"${esc(p.note)}"</i>`:""}</div>
+    </div>
+  </div>`;
+}
+
+/* ------------------------------------------------------------------ */
+/* Polling                                                             */
+/* ------------------------------------------------------------------ */
+function startPolling(){
+  stopPolling();
+  pollTimer = setInterval(async ()=>{
+    if(view!=="event" || !evId) return;
+    const ael = document.activeElement;
+    if(ael && (ael.tagName==="INPUT" || ael.tagName==="SELECT" || ael.tagName==="TEXTAREA")) return;
+    if(pendingRoleSwitch || pendingSeatChange || addingPaxFor) return;
+    if(pendingWrites > 0 || Date.now() - lastLocalEdit < 1500) return;
+    const raw = await stGet("cp-ev-"+evId, true);
+    if(raw && raw !== lastSnapshot){
+      lastSnapshot = raw;
+      ev = JSON.parse(raw);
+      if(me && !ev.people[me]) me = null;
+      render();
+    }
+  }, 2000);
+}
+function stopPolling(){ if(pollTimer){ clearInterval(pollTimer); pollTimer = null; } }
+
+/* ------------------------------------------------------------------ */
+function boot(){
+  const h = (typeof location!=="undefined" ? location.hash : "").replace("#","").trim();
+  if(h){ openEvent(h); } else { view = "landing"; render(); }
+}
+window.addEventListener("hashchange", boot);
+boot();
+</script>
+</body>
+</html>`;
