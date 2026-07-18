@@ -658,7 +658,7 @@
       <div>
         <h1>${esc(ev.name)}</h1>
         <p class="muted" style="margin:4px 0 0;">${esc(ev.date || "date TBC")}${
-          ev.dest ? ` &middot; to ${esc(ev.dest)}` : ""
+          ev.dest ? ` &middot; to ${mapLink(ev.dest)}` : ""
         }${
           ev.arriveBy
             ? ` &middot; aim to arrive by <b>${esc(ev.arriveBy)}</b>`
