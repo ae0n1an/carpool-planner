@@ -460,7 +460,7 @@
       let addingPaxFor = null;
       let addingInviteFor = null;
       let addingCar = false;
-      let editingCarFor = null;
+      let editingSeats = false;
       let pendingRemoveCar = false;
       let editingMyLoc = false;
       let editingMyNote = false;
@@ -1032,19 +1032,6 @@
         });
       }
 
-      async function saveCarDetails(dk) {
-        const loc = document.getElementById("ecd-loc").value.trim();
-        const leaveAt = document.getElementById("ecd-leave").value;
-        const note = document.getElementById("ecd-note").value.trim();
-        editingCarFor = null;
-        await mutate((e) => {
-          const d = e.people[dk];
-          d.loc = loc;
-          d.leaveAt = leaveAt;
-          d.note = note;
-        });
-      }
-
       function geoLocate(btn, inputId) {
         if (!navigator.geolocation) {
           flashBtn(btn, "Not supported");
@@ -1257,29 +1244,6 @@
         <button class="small" onclick="cancelRemoveCar()">Cancel</button>
       </div></div>`;
         }
-        let carDetailsForm = "";
-        if (editingCarFor === dk && mine) {
-          carDetailsForm = `<div style="margin-top:8px; padding:8px; background:var(--bg); border-radius:var(--radius);">
-      <div class="field"><label>Departing from *</label>
-        <div class="row">
-          <input type="text" id="ecd-loc" value="${esc(
-            d.loc
-          )}" placeholder="Full street address" style="flex:1; min-width:0;">
-          <button class="small" onclick="geoLocate(this,'ecd-loc')" title="Use my current location">Locate me</button>
-        </div>
-      </div>
-      <div class="field"><label>Leaving at</label>
-        <input type="time" id="ecd-leave" value="${esc(d.leaveAt)}"></div>
-      <div class="field"><label>Note for the group</label>
-        <input type="text" id="ecd-note" value="${esc(
-          d.note
-        )}" placeholder="Bringing a cooler"></div>
-      <div class="row">
-        <button class="small primary" onclick="saveCarDetails('${dk}')">Save</button>
-        <button class="small" onclick="editingCarFor=null; render();">Cancel</button>
-      </div>
-    </div>`;
-        }
         return `<div class="card" style="padding:12px;">
     <div class="row" style="justify-content:space-between; margin-bottom:2px;">
       <div>
@@ -1291,7 +1255,11 @@
         }${
           ev.dest ? ` → ${mapLink(ev.dest)}` : ""
         }${
-          d.leaveAt
+          mine
+            ? ` &middot; <input type="time" value="${esc(
+                d.leaveAt
+              )}" style="width:auto; display:inline-block; padding:2px 4px; font-size:12px;" onchange="saveMe({leaveAt:this.value})">`
+            : d.leaveAt
             ? ` &middot; departs <b style="color:var(--text);">${esc(
                 d.leaveAt
               )}</b>`
@@ -1300,14 +1268,13 @@
       </div>
       ${
         mine
-          ? `<span class="row" style="gap:4px;">
-        <input type="number" min="1" max="12" value="${esc(
-          d.seats
-        )}" style="width:56px; padding:4px 6px;" onchange="setSeats(this)" aria-label="Passenger seats">
-        <span class="badge" style="background:${ramp.l}; color:${ramp.d};">${
-              stats.used
-            }/${stats.cap}</span>
-      </span>`
+          ? editingSeats
+            ? `<input type="number" min="1" max="12" value="${esc(
+                d.seats
+              )}" style="width:56px; padding:4px 6px;" onchange="editingSeats=false; setSeats(this);" aria-label="Passenger seats">`
+            : `<span class="badge" style="background:${ramp.l}; color:${ramp.d}; cursor:pointer;" onclick="editingSeats=true; render();" title="Edit seats">${
+                stats.used
+              }/${stats.cap}</span>`
           : `<span class="badge" style="background:${ramp.l}; color:${ramp.d};">${
               stats.used
             }/${stats.cap}</span>`
@@ -1347,14 +1314,12 @@
             ? `<div class="row" style="margin-top:6px; flex-wrap:wrap;">
           <button class="small" onclick="addingPaxFor='${dk}'; render();">+ Add passenger</button>
           <button class="small" onclick="addingInviteFor='${dk}'; render();">+ Invite from pool</button>
-          <button class="small" onclick="editingCarFor=editingCarFor==='${dk}'?null:'${dk}'; render();">Edit car details</button>
           <button class="small danger" onclick="removeCar()">Remove my car</button>
         </div>`
             : ""
         }
         ${addForm}
         ${inviteForm}
-        ${carDetailsForm}
       </div>
     </div>
     <div class="row" style="margin-top:10px;">
