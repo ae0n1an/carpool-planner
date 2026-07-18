@@ -665,13 +665,16 @@
             : ""
         }</p>
       </div>
-      <div>
-        <div class="row">
-          <code id="share-code">#${esc(evId)}</code>
+      <div style="max-width:320px;">
+        <div class="row" style="flex-wrap:wrap; justify-content:flex-end;">
+          <button class="small primary" onclick="shareEvent(this)">Share</button>
           <button class="small" onclick="copyShare(this)">Copy link</button>
           <button class="small" onclick="backToLanding()">New trip</button>
         </div>
-        <p class="tiny" style="margin:4px 0 0; text-align:right;">Anyone with this link can view and join — nothing private is shared.</p>
+        <code id="share-code" style="display:block; margin-top:6px; font-size:11px; color:var(--text2); word-break:break-all; text-align:right;">${esc(
+          shareUrl()
+        )}</code>
+        <p class="tiny" style="margin:4px 0 0; text-align:right;">Share this link so others can join — anyone with it can view and join, nothing private is shared.</p>
       </div>
     </div>
     <div class="grid">
@@ -718,18 +721,38 @@
         return `<span class="muted" style="font-weight:400;">— ${used} of ${cap} seats filled</span>`;
       }
 
+      function shareUrl() {
+        return typeof location !== "undefined"
+          ? location.href.split("#")[0] + "#" + evId
+          : "#" + evId;
+      }
+
       function copyShare(btn) {
-        const text =
-          typeof location !== "undefined"
-            ? location.href.split("#")[0] + "#" + evId
-            : "#" + evId;
         try {
-          navigator.clipboard.writeText(text);
+          navigator.clipboard.writeText(shareUrl());
         } catch (e) {}
         btn.textContent = "Copied";
         setTimeout(() => {
           btn.textContent = "Copy link";
         }, 1500);
+      }
+
+      async function shareEvent(btn) {
+        if (navigator.share) {
+          try {
+            await navigator.share({
+              title: ev && ev.name ? ev.name : "Carpool planner",
+              text: ev && ev.name
+                ? `Join "${ev.name}" on Carpool planner`
+                : "Join this carpool trip",
+              url: shareUrl(),
+            });
+          } catch (e) {
+            /* user cancelled or share failed — no-op */
+          }
+        } else {
+          copyShare(btn);
+        }
       }
 
       /* ---------- sign in ---------- */
