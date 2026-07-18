@@ -1058,14 +1058,27 @@
             let locStr = lat.toFixed(4) + ", " + lng.toFixed(4);
             try {
               const r = await fetch(
-                "https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=" +
+                "https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=" +
                   lat +
-                  "&longitude=" +
+                  "&lon=" +
                   lng +
-                  "&localityLanguage=en"
+                  "&zoom=18&addressdetails=1"
               );
               const d = await r.json();
-              if (d && (d.locality || d.city)) locStr = d.locality || d.city;
+              const a = d && d.address;
+              if (a) {
+                const street = [a.house_number, a.road]
+                  .filter(Boolean)
+                  .join(" ");
+                locStr =
+                  street ||
+                  a.suburb ||
+                  a.neighbourhood ||
+                  a.city ||
+                  a.town ||
+                  a.village ||
+                  locStr;
+              }
             } catch (e) {
               /* keep coordinates — Google Maps understands them fine */
             }
