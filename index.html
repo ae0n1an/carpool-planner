@@ -459,6 +459,7 @@
       let pendingRoleSwitch = null;
       let pendingSeatChange = null;
       let addingPaxFor = null;
+      let addingInviteFor = null;
       let lastSnapshot = "";
       let pollTimer = null;
 
@@ -1109,13 +1110,13 @@
       function stopInfo(dk, id) {
         if (id.startsWith("p:")) {
           const p = ev.people[id.slice(2)];
-          return p ? { name: p.name, loc: p.loc, manual: false } : null;
+          return p ? { name: p.name, loc: p.loc, manual: false, note: p.note } : null;
         }
         const key = id.slice(2);
         const m = (ev.people[dk].manualPax || []).find(
           (mm, i) => (mm.id || "i" + i) === key
         );
-        return m ? { name: m.n, loc: m.loc, manual: true } : null;
+        return m ? { name: m.n, loc: m.loc, manual: true, note: null } : null;
       }
 
       function carCard(dk, i) {
@@ -1123,12 +1124,20 @@
         const ramp = RAMPS[i % RAMPS.length];
         const stats = carStats(dk);
         const mine = me === dk;
+        const occupant = !mine && me && ev.people[me].carOf === dk;
+        const canJoin =
+          !mine &&
+          !occupant &&
+          me &&
+          ev.people[me].role !== "drive" &&
+          !ev.people[me].carOf &&
+          stats.used < stats.cap;
         const stops = orderedStops(dk);
         const stopRows = stops
           .map((id, idx) => {
             const s = stopInfo(dk, id);
             if (!s) return "";
-            const arrows = mine
+            const controls = mine
               ? `<span style="margin-left:auto; white-space:nowrap;">
         ${
           idx > 0
@@ -1140,18 +1149,25 @@
             ? `<button class="small" style="padding:0 6px;" onclick="moveStop('${dk}','${id}',1)" aria-label="Later">&darr;</button>`
             : ""
         }
+        <button class="small danger" style="padding:0 6px;" onclick="removeFromCar('${dk}','${id}')" aria-label="Remove">&times;</button>
       </span>`
               : "";
             return `<div class="stop"><span class="stopnum" style="background:${
               ramp.l
             }; color:${ramp.d};">${idx + 1}</span>
-      <span>${esc(s.name)}${s.loc ? ` — ${esc(s.loc)}` : ""}${
+      <span>${esc(s.name)}${s.loc ? ` — ${mapLink(s.loc)}` : ""}${
               s.manual
                 ? ` <span style="color:var(--amber-m);">(added by ${esc(
                     d.name
                   )})</span>`
                 : ""
-            }</span>${arrows}</div>`;
+            }${
+              s.note
+                ? ` <span class="muted" style="font-style:italic;">&middot; "${esc(
+                    s.note
+                  )}"</span>`
+                : ""
+            }</span>${controls}</div>`;
           })
           .join("");
         const mapsStops = [
@@ -1181,14 +1197,40 @@
       <p class="tiny" style="margin:6px 0 0;">For someone with plans who won't sign up here.</p>
     </div>`;
         }
+        let inviteForm = "";
+        if (addingInviteFor === dk && mine) {
+          const candidates = pool();
+          inviteForm = `<div style="margin-top:8px; padding:8px; background:var(--bg); border-radius:var(--radius);">
+      ${
+        candidates.length
+          ? candidates
+              .map(
+                (k) => `<div class="row" style="margin-bottom:4px;">
+        <span style="flex:1; min-width:0;">${esc(ev.people[k].name)}</span>
+        <button class="small primary" onclick="inviteFromPool('${dk}','${k}')">Invite</button>
+      </div>`
+              )
+              .join("")
+          : `<p class="tiny" style="margin:0;">Nobody left in the pool to invite.</p>`
+      }
+      <button class="small" onclick="addingInviteFor=null; render();">Close</button>
+    </div>`;
+        }
+        const joinLeave = occupant
+          ? `<button class="small danger" style="flex:1;" onclick="leaveCar()">Leave this car</button>`
+          : canJoin
+          ? `<button class="small primary" style="flex:1;" onclick="claimSeat('${dk}')">Join this car</button>`
+          : "";
         return `<div class="card" style="padding:12px;">
     <div class="row" style="justify-content:space-between; margin-bottom:2px;">
       <div>
         <span style="font-weight:600; font-size:14px;">${esc(
           d.name
         )}'s car &middot; ${stats.cap + 1} seats</span>
-        <p class="muted" style="margin:0;">${esc(d.loc || "start TBC")}${
-          ev.dest ? ` → ${esc(ev.dest)}` : ""
+        <p class="muted" style="margin:0;">${
+          d.loc ? mapLink(d.loc) : "start TBC"
+        }${
+          ev.dest ? ` → ${mapLink(ev.dest)}` : ""
         }${
           d.leaveAt
             ? ` &middot; departs <b style="color:var(--text);">${esc(
@@ -1216,29 +1258,34 @@
         }</p>
         <div class="stop"><span class="stopnum" style="background:${
           ramp.c
-        }; color:#fff;">S</span><span>${esc(d.name)} — ${esc(
-          d.loc || "TBC"
-        )} (start)</span></div>
+        }; color:#fff;">S</span><span>${esc(d.name)} — ${
+          d.loc ? mapLink(d.loc) : "TBC"
+        } (start)</span></div>
         ${stopRows}
         ${
           ev.dest
             ? `<div class="stop"><span class="stopnum" style="background:${
                 ramp.c
-              }; color:#fff;">&#9873;</span><span style="color:var(--text);">${esc(
+              }; color:#fff;">&#9873;</span><span style="color:var(--text);">${mapLink(
                 ev.dest
               )}</span></div>`
             : ""
         }
         ${
           mine
-            ? `<button class="small" style="margin-top:6px;" onclick="addingPaxFor='${dk}'; render();">+ Add passenger</button>`
+            ? `<div class="row" style="margin-top:6px;">
+          <button class="small" onclick="addingPaxFor='${dk}'; render();">+ Add passenger</button>
+          <button class="small" onclick="addingInviteFor='${dk}'; render();">+ Invite from pool</button>
+        </div>`
             : ""
         }
         ${addForm}
+        ${inviteForm}
       </div>
     </div>
     <div class="row" style="margin-top:10px;">
       <button class="small" style="flex:1;" onclick="window.open('${mapsUrl}','_blank')">Open in Google Maps</button>
+      ${joinLeave}
     </div>
   </div>`;
       }
@@ -1341,6 +1388,33 @@
       async function claimSeat(dk) {
         await mutate((e) => {
           const p = e.people[me];
+          const s = carStatsIn(e, dk);
+          if (p && p.role !== "drive" && !p.carOf && s.used < s.cap) {
+            p.carOf = dk;
+          }
+        });
+      }
+
+      async function removeFromCar(dk, id) {
+        await mutate((e) => {
+          const d = e.people[dk];
+          if (id.startsWith("p:")) {
+            const p = e.people[id.slice(2)];
+            if (p && p.carOf === dk) p.carOf = null;
+          } else {
+            const key = id.slice(2);
+            d.manualPax = (d.manualPax || []).filter(
+              (m, i) => (m.id || "i" + i) !== key
+            );
+          }
+          d.paxOrder = (d.paxOrder || []).filter((x) => x !== id);
+        });
+      }
+
+      async function inviteFromPool(dk, key) {
+        addingInviteFor = null;
+        await mutate((e) => {
+          const p = e.people[key];
           const s = carStatsIn(e, dk);
           if (p && p.role !== "drive" && !p.carOf && s.used < s.cap) {
             p.carOf = dk;
