@@ -7,7 +7,7 @@ async function getKV() {
     kv = await Deno.openKv();
     console.log("Successfully connected to Deno KV cloud instance.");
     return kv;
-  } catch (e) {
+  } catch (e) 
     console.error("Deno KV connection error:", e);
     return null;
   }
@@ -85,7 +85,7 @@ Deno.serve(async (req) => {
 });
 
 // PASTE YOUR ENTIRE HTML FILE INSIDE THESE BACKTICKS
-const htmlContent = `<!DOCTYPE html>
+const htmlContent = \`<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -544,10 +544,10 @@ function render(){
 }
 
 function renderLanding(){
-  app.innerHTML = `
+  app.innerHTML = \`
     <div class="topbar"><h1>Carpool planner</h1></div>
-    ${hasStore?"":`<div class="notice">Shared storage isn't available here — running in demo mode, data won't persist.</div>`}
-    ${notFound?`<div class="notice">That trip link didn't match anything — it may be mistyped. Create a new trip below.</div>`:""}
+    ${hasStore?"":\`<div class="notice">Shared storage isn't available here — running in demo mode, data won't persist.</div>\`}
+    ${notFound?\`<div class="notice">That trip link didn't match anything — it may be mistyped. Create a new trip below.</div>\`:""}
     <div class="card" style="max-width:420px;">
       <h2 style="margin-bottom:4px;">Create a trip</h2>
       <p class="tiny" style="margin:0 0 12px;">You'll get a unique link to share — anyone with it can join.</p>
@@ -556,7 +556,7 @@ function renderLanding(){
       <div class="field"><label>Destination</label><input type="text" id="c-dest" placeholder="Torquay"></div>
       <div class="field"><label>Aim to arrive by (optional)</label><input type="time" id="c-arrive"></div>
       <button class="primary" style="width:100%;" onclick="createTrip()">Create trip</button>
-    </div>`;
+    </div>\`;
 }
 
 async function createTrip(){
@@ -601,14 +601,14 @@ function renderEvent(){
   let shortLine = "";
   if(drivers().length && short>0){
     shortLine = flexFolk.length
-      ? `<span class="hint-warn">${short} seat${short>1?"s":""} short — ${esc(ev.people[flexFolk[0]].name)} could drive</span>`
-      : `<span class="hint-warn">${short} seat${short>1?"s":""} short</span>`;
+      ? \`<span class="hint-warn">${short} seat${short>1?"s":""} short — ${esc(ev.people[flexFolk[0]].name)} could drive</span>\`
+      : \`<span class="hint-warn">${short} seat${short>1?"s":""} short</span>\`;
   }
-  app.innerHTML = `
+  app.innerHTML = \`
     <div class="topbar">
       <div>
         <h1>${esc(ev.name)}</h1>
-        <p class="muted" style="margin:4px 0 0;">${esc(ev.date||"date TBC")}${ev.dest?` &middot; to ${esc(ev.dest)}`:""}${ev.arriveBy?` &middot; aim to arrive by <b>${esc(ev.arriveBy)}</b>`:""}</p>
+        <p class="muted" style="margin:4px 0 0;">${esc(ev.date||"date TBC")}${ev.dest?\` &middot; to ${esc(ev.dest)}\`:""}${ev.arriveBy?\` &middot; aim to arrive by <b>${esc(ev.arriveBy)}</b>\`:""}</p>
       </div>
       <div class="row">
         <code id="share-code">#${esc(evId)}</code>
@@ -627,23 +627,23 @@ function renderEvent(){
             <span><span class="sw" style="border:1.5px dashed var(--border-strong);"></span> open</span>
           </div>
         </div>
-        ${drivers().length ? `<div class="cars">${drivers().map((dk,i)=>carCard(dk,i)).join("")}</div>`
-          : `<div class="card muted">No cars yet — the first person to pick "I can drive" creates one.</div>`}
+        ${drivers().length ? \`<div class="cars">${drivers().map((dk,i)=>carCard(dk,i)).join("")}</div>\`
+          : \`<div class="card muted">No cars yet — the first person to pick "I can drive" creates one.</div>\`}
         <div class="card" style="margin-top:14px;">
           <div class="row" style="justify-content:space-between; flex-wrap:wrap;">
             <h2>Not in a car yet (${pool().length})</h2>${shortLine}
           </div>
-          ${pool().length ? pool().map(poolRow).join("") : `<p class="muted" style="margin:8px 0 0;">Everyone's sorted.</p>`}
+          ${pool().length ? pool().map(poolRow).join("") : \`<p class="muted" style="margin:8px 0 0;">Everyone's sorted.</p>\`}
         </div>
       </div>
-    </div>`;
+    </div>\`;
 }
 
 function carsSummary(){
   if(!drivers().length) return "";
   let cap=0, used=0;
   drivers().forEach(dk=>{ const s=carStats(dk); cap+=s.cap; used+=s.used; });
-  return `<span class="muted" style="font-weight:400;">— ${used} of ${cap} seats filled</span>`;
+  return \`<span class="muted" style="font-weight:400;">— ${used} of ${cap} seats filled</span>\`;
 }
 
 function copyShare(btn){
@@ -655,14 +655,14 @@ function copyShare(btn){
 
 /* ---------- sign in ---------- */
 function signInPanel(){
-  return `<div class="card">
+  return \`<div class="card">
     <h2 style="margin-bottom:12px;">Sign in</h2>
     <div class="field"><label>Your name</label><input type="text" id="si-name"></div>
     <div class="field"><label>Password (optional)</label><input type="password" id="si-pw"></div>
     <p class="tiny" id="si-err" style="color:var(--red); margin:0 0 8px; display:none;"></p>
     <button class="primary" style="width:100%;" onclick="signIn()">Sign in</button>
     <p class="tiny" style="margin:10px 0 0; line-height:1.6;">Name and password are only for this trip.<br>New here? Just pick a name.<br>Returning? Use the same name and password.</p>
-  </div>`;
+  </div>\`;
 }
 
 async function signIn(){
@@ -707,21 +707,21 @@ function detailsPanel(){
   const stats = isDrive ? carStats(me) : null;
   let confirmBlock = "";
   if(pendingRoleSwitch){
-    confirmBlock = `<div class="notice">Switching to "${pendingRoleSwitch==='ride'?'I need a ride':'driver'}" removes your car — your ${carStats(me).used} passenger${carStats(me).used>1?"s":""} go back to the pool.
+    confirmBlock = \`<div class="notice">Switching to "${pendingRoleSwitch==='ride'?'I need a ride':'driver'}" removes your car — your ${carStats(me).used} passenger${carStats(me).used>1?"s":""} go back to the pool.
       <div class="row" style="margin-top:8px;">
         <button class="small danger" onclick="confirmRoleSwitch()">Switch anyway</button>
         <button class="small" onclick="cancelRoleSwitch()">Cancel</button>
-      </div></div>`;
+      </div></div>\`;
   }
   if(pendingSeatChange != null){
     const excess = carStats(me).used - pendingSeatChange;
-    confirmBlock += `<div class="notice">Dropping to ${pendingSeatChange} seat${pendingSeatChange>1?"s":""} removes your last ${excess} passenger${excess>1?"s":""} — they go back to the pool.
+    confirmBlock += \`<div class="notice">Dropping to ${pendingSeatChange} seat${pendingSeatChange>1?"s":""} removes your last ${excess} passenger${excess>1?"s":""} — they go back to the pool.
       <div class="row" style="margin-top:8px;">
         <button class="small danger" onclick="confirmSeatChange()">Reduce seats</button>
         <button class="small" onclick="pendingSeatChange=null; render();">Cancel</button>
-      </div></div>`;
+      </div></div>\`;
   }
-  return `<div class="card">
+  return \`<div class="card">
     <div class="row" style="justify-content:space-between; margin-bottom:12px;">
       <div class="row">
         <div class="avatar" style="background:var(--blue-l); color:var(--blue-d);">${initials(p.name)}</div>
@@ -730,21 +730,21 @@ function detailsPanel(){
       <button class="small" onclick="signOut()">Sign out</button>
     </div>
     <div style="border-top:1px solid var(--border); padding-top:12px;">
-      ${manualMatches().map(x=>`<div class="notice">${esc(ev.people[x.dk].name)} added "${esc(x.m.n)}"${x.m.loc?` (${esc(x.m.loc)})`:""} to their car — is that you?
+      ${manualMatches().map(x=>\`<div class="notice">${esc(ev.people[x.dk].name)} added "${esc(x.m.n)}"${x.m.loc?\` (${esc(x.m.loc)})\`:""} to their car — is that you?
         <div class="row" style="margin-top:8px;">
           <button class="small primary" onclick="claimManual('${x.dk}','${x.mid}')">Take the seat</button>
           <button class="small" onclick="dismissManual('${x.mid}')">Not me</button>
-        </div></div>`).join("")}
+        </div></div>\`).join("")}
       ${confirmBlock}
       <div class="radio-box" style="margin-bottom:12px;">
         <label class="opt"><input type="radio" name="role" ${isDrive?"checked":""} onchange="setRole('drive')"> I can drive</label>
         <label class="opt"><input type="radio" name="role" ${isRide?"checked":""} onchange="setRole('ride')"> I need a ride</label>
-        ${isRide ? `<label class="opt" style="margin-left:24px; font-size:13px; color:var(--text2);">
-            <input type="checkbox" ${p.flex?"checked":""} onchange="saveMe({flex:this.checked})"> &hellip;but I can drive if needed</label>`:""}
-        ${showSeats ? `<div style="margin-top:8px; padding-top:8px; border-top:1px solid var(--border);">
+        ${isRide ? \`<label class="opt" style="margin-left:24px; font-size:13px; color:var(--text2);">
+            <input type="checkbox" ${p.flex?"checked":""} onchange="saveMe({flex:this.checked})"> &hellip;but I can drive if needed</label>\`:""}
+        ${showSeats ? \`<div style="margin-top:8px; padding-top:8px; border-top:1px solid var(--border);">
           <label>${isDrive?"Passenger seats (excl. you) *":"Seats if you end up driving"}</label>
           <input type="number" min="1" max="12" value="${esc(p.seats)}" onchange="setSeats(this)">
-        </div>`:""}
+        </div>\`:""}
       </div>
       <div class="field">
         <label>${isDrive?"Departing from *":"Pickup location *"}</label>
@@ -753,20 +753,20 @@ function detailsPanel(){
           <button class="small" onclick="geoLocate(this)" title="Use my current location">Locate me</button>
         </div>
       </div>
-      ${!isDrive ? `<label class="opt" style="display:flex; gap:8px; font-size:13px; color:var(--text2); margin-bottom:10px; cursor:pointer;">
-        <input type="checkbox" ${p.meet?"checked":""} onchange="saveMe({meet:this.checked})"> Happy to meet the car somewhere convenient</label>`:""}
-      ${isDrive ? `<div class="field"><label>Leaving at</label>
+      ${!isDrive ? \`<label class="opt" style="display:flex; gap:8px; font-size:13px; color:var(--text2); margin-bottom:10px; cursor:pointer;">
+        <input type="checkbox" ${p.meet?"checked":""} onchange="saveMe({meet:this.checked})"> Happy to meet the car somewhere convenient</label>\`:""}
+      ${isDrive ? \`<div class="field"><label>Leaving at</label>
         <input type="time" value="${esc(p.leaveAt)}" onchange="saveMe({leaveAt:this.value})">
-        ${ev.arriveBy?`<p class="tiny" style="margin:4px 0 0;">Event target: arrive by ${esc(ev.arriveBy)}.</p>`:""}
-      </div>`:""}
+        ${ev.arriveBy?\`<p class="tiny" style="margin:4px 0 0;">Event target: arrive by ${esc(ev.arriveBy)}.</p>\`:""}
+      </div>\`:""}
       <div class="field"><label>Note for the group</label>
         <input type="text" value="${esc(p.note)}" placeholder="Boards on roof" onchange="saveMe({note:this.value.trim()})"></div>
-      ${p.carOf && ev.people[p.carOf] ? `<div class="field">
+      ${p.carOf && ev.people[p.carOf] ? \`<div class="field">
         <p class="muted" style="margin:0 0 6px;">You're in ${esc(ev.people[p.carOf].name)}'s car.</p>
-        <button class="small danger" onclick="leaveCar()">Leave this car</button></div>`:""}
+        <button class="small danger" onclick="leaveCar()">Leave this car</button></div>\`:""}
       <p class="tiny">Changes save automatically.</p>
     </div>
-  </div>`;
+  </div>\`;
 }
 
 function setRole(role){
@@ -922,18 +922,18 @@ function carCard(dk, i){
   const stopRows = stops.map((id,idx)=>{
     const s = stopInfo(dk,id);
     if(!s) return "";
-    const arrows = mine ? `<span style="margin-left:auto; white-space:nowrap;">
-        ${idx>0?`<button class="small" style="padding:0 6px;" onclick="moveStop('${dk}','${id}',-1)" aria-label="Earlier">&uarr;</button>`:""}
-        ${idx<stops.length-1?`<button class="small" style="padding:0 6px;" onclick="moveStop('${dk}','${id}',1)" aria-label="Later">&darr;</button>`:""}
-      </span>` : "";
-    return `<div class="stop"><span class="stopnum" style="background:${ramp.l}; color:${ramp.d};">${idx+1}</span>
-      <span>${esc(s.name)}${s.loc?` — ${esc(s.loc)}`:""}${s.manual?` <span style="color:var(--amber-m);">(added by ${esc(d.name)})</span>`:""}</span>${arrows}</div>`;
+    const arrows = mine ? \`<span style="margin-left:auto; white-space:nowrap;">
+        ${idx>0?\`<button class="small" style="padding:0 6px;" onclick="moveStop('${dk}','${id}',-1)" aria-label="Earlier">&uarr;</button>\`:""}
+        ${idx<stops.length-1?\`<button class="small" style="padding:0 6px;" onclick="moveStop('${dk}','${id}',1)" aria-label="Later">&darr;</button>\`:""}
+      </span>\` : "";
+    return \`<div class="stop"><span class="stopnum" style="background:${ramp.l}; color:${ramp.d};">${idx+1}</span>
+      <span>${esc(s.name)}${s.loc?\` — ${esc(s.loc)}\`:""}${s.manual?\` <span style="color:var(--amber-m);">(added by ${esc(d.name)})</span>\`:""}</span>${arrows}</div>\`;
   }).join("");
   const mapsStops = [d.loc, ...stops.map(id=>{const s=stopInfo(dk,id); return s&&s.loc;}).filter(Boolean), ev.dest].filter(Boolean);
   const mapsUrl = "https://www.google.com/maps/dir/" + mapsStops.map(encodeURIComponent).join("/");
   let addForm = "";
   if(addingPaxFor===dk && mine){
-    addForm = `<div style="margin-top:8px; padding:8px; background:var(--bg); border-radius:var(--radius);">
+    addForm = \`<div style="margin-top:8px; padding:8px; background:var(--bg); border-radius:var(--radius);">
       <div class="row" style="margin-bottom:6px;">
         <input type="text" id="mp-name" placeholder="Name" style="flex:1; min-width:0;">
         <input type="text" id="mp-loc" placeholder="Suburb" style="flex:1; min-width:0;">
@@ -943,32 +943,32 @@ function carCard(dk, i){
         <button class="small" onclick="addingPaxFor=null; render();">Cancel</button>
       </div>
       <p class="tiny" style="margin:6px 0 0;">For someone with plans who won't sign up here.</p>
-    </div>`;
+    </div>\`;
   }
-  return `<div class="card" style="padding:12px;">
+  return \`<div class="card" style="padding:12px;">
     <div class="row" style="justify-content:space-between; margin-bottom:2px;">
       <div>
         <span style="font-weight:600; font-size:14px;">${esc(d.name)}'s car &middot; ${stats.cap+1} seats</span>
-        <p class="muted" style="margin:0;">${esc(d.loc||"start TBC")}${ev.dest?` → ${esc(ev.dest)}`:""}${d.leaveAt?` &middot; departs <b style="color:var(--text);">${esc(d.leaveAt)}</b>`:" &middot; time TBC"}</p>
+        <p class="muted" style="margin:0;">${esc(d.loc||"start TBC")}${ev.dest?\` → ${esc(ev.dest)}\`:""}${d.leaveAt?\` &middot; departs <b style="color:var(--text);">${esc(d.leaveAt)}</b>\`:" &middot; time TBC"}</p>
       </div>
       <span class="badge" style="background:${ramp.l}; color:${ramp.d};">${stats.used}/${stats.cap}</span>
     </div>
-    ${d.note?`<p class="muted" style="font-style:italic; margin:4px 0 6px;">"${esc(d.note)}"</p>`:""}
+    ${d.note?\`<p class="muted" style="font-style:italic; margin:4px 0 6px;">"${esc(d.note)}"</p>\`:""}
     <div style="display:flex; gap:12px; align-items:flex-start; margin-top:6px;">
       <div style="flex-shrink:0;">${carSVG(dk, ramp)}</div>
       <div style="flex:1; min-width:0;">
         <p class="tiny" style="margin:0 0 4px;">Pickup order${mine?" — use arrows to reorder":""}</p>
         <div class="stop"><span class="stopnum" style="background:${ramp.c}; color:#fff;">S</span><span>${esc(d.name)} — ${esc(d.loc||"TBC")} (start)</span></div>
         ${stopRows}
-        ${ev.dest?`<div class="stop"><span class="stopnum" style="background:${ramp.c}; color:#fff;">&#9873;</span><span style="color:var(--text);">${esc(ev.dest)}</span></div>`:""}
-        ${mine?`<button class="small" style="margin-top:6px;" onclick="addingPaxFor='${dk}'; render();">+ Add passenger</button>`:""}
+        ${ev.dest?\`<div class="stop"><span class="stopnum" style="background:${ramp.c}; color:#fff;">&#9873;</span><span style="color:var(--text);">${esc(ev.dest)}</span></div>\`:""}
+        ${mine?\`<button class="small" style="margin-top:6px;" onclick="addingPaxFor='${dk}'; render();">+ Add passenger</button>\`:""}
         ${addForm}
       </div>
     </div>
     <div class="row" style="margin-top:10px;">
       <button class="small" style="flex:1;" onclick="window.open('${mapsUrl}','_blank')">Open in Google Maps</button>
     </div>
-  </div>`;
+  </div>\`;
 }
 
 function seatLayout(count){
@@ -1003,20 +1003,20 @@ function carSVG(dk, ramp){
     const fill = open ? "#fff" : manual ? "var(--amber)" : ramp.c;
     const stroke = open ? "var(--border-strong)" : manual ? "var(--amber-m)" : ramp.c;
     const label = open ? "" : initials(c.n);
-    const click = open && canClaim ? `onclick="claimSeat('${dk}')"` : "";
-    return `<g class="seat ${open&&canClaim?"open":""}" ${click}>
+    const click = open && canClaim ? \`onclick="claimSeat('${dk}')"\` : "";
+    return \`<g class="seat ${open&&canClaim?"open":""}" ${click}>
       <rect x="${p[0]-16}" y="${p[1]-16}" width="32" height="32" rx="8" fill="${fill}" stroke="${stroke}" stroke-width="1.5" ${open?'stroke-dasharray="4 3"':''}/>
-      ${open ? `<text x="${p[0]}" y="${p[1]+5}" text-anchor="middle" font-size="14" fill="var(--text3)">${canClaim?"+":""}</text>`
-             : `<text x="${p[0]}" y="${p[1]+4}" text-anchor="middle" font-size="11" font-weight="600" fill="${manual?"var(--amber-d)":"#fff"}">${esc(label)}</text>`}
-      ${i===0?`<text x="${p[0]}" y="${p[1]-21}" text-anchor="middle" font-size="9" fill="${ramp.m}">driver</text>`:""}
-    </g>`;
+      ${open ? \`<text x="${p[0]}" y="${p[1]+5}" text-anchor="middle" font-size="14" fill="var(--text3)">${canClaim?"+":""}</text>\`
+             : \`<text x="${p[0]}" y="${p[1]+4}" text-anchor="middle" font-size="11" font-weight="600" fill="${manual?"var(--amber-d)":"#fff"}">${esc(label)}</text>\`}
+      ${i===0?\`<text x="${p[0]}" y="${p[1]-21}" text-anchor="middle" font-size="9" fill="${ramp.m}">driver</text>\`:""}
+    </g>\`;
   }).join("");
   const h = height + 14;
-  return `<svg viewBox="0 0 160 ${h}" width="120" height="${Math.round(h*0.75)}" role="img" aria-label="${esc(d.name)}'s car seat map">
+  return \`<svg viewBox="0 0 160 ${h}" width="120" height="${Math.round(h*0.75)}" role="img" aria-label="${esc(d.name)}'s car seat map">
     <rect x="20" y="4" width="120" height="${h-8}" rx="28" fill="${ramp.l}" stroke="${ramp.m}" stroke-width="1.5"/>
     <path d="M 34 62 Q 80 50 126 62" fill="none" stroke="${ramp.m}" stroke-width="1.5" opacity="0.5"/>
     ${seats}
-  </svg>`;
+  </svg>\`;
 }
 
 async function claimSeat(dk){
@@ -1070,16 +1070,16 @@ function orderedStopsIn(e, dk){
 function poolRow(k){
   const p = ev.people[k];
   const undecided = !p.role;
-  const flexBadge = p.flex ? `<span class="badge" style="background:var(--amber-l); color:var(--amber-d);">can drive &middot; ${esc(p.seats)} seats</span>` : "";
-  const meetBadge = p.meet ? `<span class="badge" style="background:var(--blue-l); color:var(--blue-d);">will meet anywhere</span>` : "";
-  const undBadge = undecided ? `<span class="badge" style="background:var(--bg); color:var(--text2); border:1px solid var(--border);">undecided</span>` : "";
-  return `<div class="pool-row">
+  const flexBadge = p.flex ? \`<span class="badge" style="background:var(--amber-l); color:var(--amber-d);">can drive &middot; ${esc(p.seats)} seats</span>\` : "";
+  const meetBadge = p.meet ? \`<span class="badge" style="background:var(--blue-l); color:var(--blue-d);">will meet anywhere</span>\` : "";
+  const undBadge = undecided ? \`<span class="badge" style="background:var(--bg); color:var(--text2); border:1px solid var(--border);">undecided</span>\` : "";
+  return \`<div class="pool-row">
     <div class="avatar" style="background:${p.flex?"var(--amber-l)":"var(--blue-l)"}; color:${p.flex?"var(--amber-d)":"var(--blue-d)"};">${initials(p.name)}</div>
     <div style="flex:1; min-width:0;">
       <div style="font-size:13px; font-weight:600;">${esc(p.name)} ${flexBadge} ${meetBadge} ${undBadge}</div>
-      <div class="muted">${p.loc?esc(p.loc):"location TBC"}${p.note?` &middot; <i>"${esc(p.note)}"</i>`:""}</div>
+      <div class="muted">${p.loc?esc(p.loc):"location TBC"}${p.note?\` &middot; <i>"${esc(p.note)}"</i>\`:""}</div>
     </div>
-  </div>`;
+  </div>\`;
 }
 
 /* ------------------------------------------------------------------ */
