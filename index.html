@@ -460,6 +460,7 @@
       let pendingSeatChange = null;
       let addingPaxFor = null;
       let addingInviteFor = null;
+      let addingCar = false;
       let lastSnapshot = "";
       let pollTimer = null;
 
@@ -688,12 +689,38 @@
             <span><span class="sw" style="border:1.5px dashed var(--border-strong);"></span> open</span>
           </div>
         </div>
+        ${manualMatchBanner()}
+        ${
+          me && ev.people[me].role !== "drive"
+            ? `<div class="row" style="margin-bottom:10px;">
+          <button class="small primary" onclick="addingCar=true; render();">+ Add my car</button>
+        </div>`
+            : ""
+        }
+        ${
+          addingCar
+            ? `<div class="card" style="margin-bottom:14px;">
+          <div class="field"><label>Passenger seats (excl. you) *</label>
+            <input type="number" id="ac-seats" min="1" max="12" value="4"></div>
+          <div class="field"><label>Departing from *</label>
+            <div class="row">
+              <input type="text" id="ac-loc" placeholder="Full street address" style="flex:1; min-width:0;">
+              <button class="small" onclick="geoLocate(this,'ac-loc')" title="Use my current location">Locate me</button>
+            </div>
+          </div>
+          <div class="row">
+            <button class="small primary" onclick="addCar()">Add my car</button>
+            <button class="small" onclick="addingCar=false; render();">Cancel</button>
+          </div>
+        </div>`
+            : ""
+        }
         ${
           drivers().length
             ? `<div class="cars">${drivers()
                 .map((dk, i) => carCard(dk, i))
                 .join("")}</div>`
-            : `<div class="card muted">No cars yet — the first person to pick "I can drive" creates one.</div>`
+            : `<div class="card muted">No cars yet — the first person to add one creates it.</div>`
         }
         <div class="card" style="margin-top:14px;">
           <div class="row" style="justify-content:space-between; flex-wrap:wrap;">
@@ -719,6 +746,25 @@
           used += s.used;
         });
         return `<span class="muted" style="font-weight:400;">— ${used} of ${cap} seats filled</span>`;
+      }
+
+      async function addCar() {
+        const seatsInput = document.getElementById("ac-seats");
+        const locInput = document.getElementById("ac-loc");
+        const seats = Math.max(
+          1,
+          Math.min(12, parseInt(seatsInput.value, 10) || 1)
+        );
+        const loc = locInput.value.trim();
+        addingCar = false;
+        await mutate((e) => {
+          const p = e.people[me];
+          p.role = "drive";
+          p.seats = seats;
+          p.loc = loc;
+          p.carOf = null;
+          p.flex = false;
+        });
       }
 
       function shareUrl() {
@@ -1009,6 +1055,23 @@
           });
         });
         return out;
+      }
+      function manualMatchBanner() {
+        return manualMatches()
+          .map(
+            (x) => `<div class="notice">${esc(ev.people[x.dk].name)} added "${esc(
+              x.m.n
+            )}"${x.m.loc ? ` (${esc(x.m.loc)})` : ""} to their car — is that you?
+        <div class="row" style="margin-top:8px;">
+          <button class="small primary" onclick="claimManual('${x.dk}','${
+              x.mid
+            }')">Take the seat</button>
+          <button class="small" onclick="dismissManual('${
+              x.mid
+            }')">Not me</button>
+        </div></div>`
+          )
+          .join("");
       }
       function claimManual(dk, mid) {
         mutate((e) => {
