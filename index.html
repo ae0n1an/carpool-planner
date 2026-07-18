@@ -570,9 +570,9 @@
     <div class="card" style="max-width:420px;">
       <h2 style="margin-bottom:4px;">Create a trip</h2>
       <p class="tiny" style="margin:0 0 12px;">You'll get a unique link to share — anyone with it can join.</p>
-      <div class="field"><label>Trip name</label><input type="text" id="c-name" placeholder="Torquay surf trip"></div>
+      <div class="field"><label>Trip name</label><input type="text" id="c-name" placeholder="Weekend trip"></div>
       <div class="field"><label>Date</label><input type="date" id="c-date"></div>
-      <div class="field"><label>Destination</label><input type="text" id="c-dest" placeholder="Torquay"></div>
+      <div class="field"><label>Destination</label><input type="text" id="c-dest" placeholder="Blue Mountains"></div>
       <div class="field"><label>Aim to arrive by (optional)</label><input type="time" id="c-arrive"></div>
       <button class="primary" style="width:100%;" onclick="createTrip()">Create trip</button>
     </div>`;
@@ -658,10 +658,13 @@
             : ""
         }</p>
       </div>
-      <div class="row">
-        <code id="share-code">#${esc(evId)}</code>
-        <button class="small" onclick="copyShare(this)">Copy link</button>
-        <button class="small" onclick="backToLanding()">New trip</button>
+      <div>
+        <div class="row">
+          <code id="share-code">#${esc(evId)}</code>
+          <button class="small" onclick="copyShare(this)">Copy link</button>
+          <button class="small" onclick="backToLanding()">New trip</button>
+        </div>
+        <p class="tiny" style="margin:4px 0 0; text-align:right;">Anyone with this link can view and join — nothing private is shared.</p>
       </div>
     </div>
     <div class="grid">
@@ -876,7 +879,7 @@
         <div class="row">
           <input type="text" id="my-loc" value="${esc(
             p.loc
-          )}" placeholder="Address or suburb" style="flex:1; min-width:0;" onchange="saveMe({loc:this.value.trim()})">
+          )}" placeholder="Full street address" style="flex:1; min-width:0;" onchange="saveMe({loc:this.value.trim()})">
           <button class="small" onclick="geoLocate(this)" title="Use my current location">Locate me</button>
         </div>
       </div>
@@ -907,7 +910,7 @@
       <div class="field"><label>Note for the group</label>
         <input type="text" value="${esc(
           p.note
-        )}" placeholder="Boards on roof" onchange="saveMe({note:this.value.trim()})"></div>
+        )}" placeholder="Bringing a cooler" onchange="saveMe({note:this.value.trim()})"></div>
       ${
         p.carOf && ev.people[p.carOf]
           ? `<div class="field">
@@ -1164,7 +1167,7 @@
           addForm = `<div style="margin-top:8px; padding:8px; background:var(--bg); border-radius:var(--radius);">
       <div class="row" style="margin-bottom:6px;">
         <input type="text" id="mp-name" placeholder="Name" style="flex:1; min-width:0;">
-        <input type="text" id="mp-loc" placeholder="Suburb" style="flex:1; min-width:0;">
+        <input type="text" id="mp-loc" placeholder="Address" style="flex:1; min-width:0;">
       </div>
       <div class="row">
         <button class="small primary" onclick="addManualPax('${dk}')">Add</button>
