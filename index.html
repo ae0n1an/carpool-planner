@@ -456,7 +456,6 @@
       let ev = null; // current event object
       let evId = null;
       let me = null; // my person key, or null
-      let pendingRoleSwitch = null;
       let pendingSeatChange = null;
       let addingPaxFor = null;
       let addingInviteFor = null;
@@ -680,8 +679,8 @@
         <p class="tiny" style="margin:4px 0 0; text-align:right;">Share this link so others can join — anyone with it can view and join, nothing private is shared.</p>
       </div>
     </div>
-    <div class="grid">
-      <div>${me ? detailsPanel() : signInPanel()}</div>
+    <div class="grid"${me ? ' style="grid-template-columns:1fr;"' : ""}>
+      ${me ? "" : `<div>${signInPanel()}</div>`}
       <div>
         <div class="row" style="justify-content:space-between; margin-bottom:10px; flex-wrap:wrap;">
           <h2>Cars ${carsSummary()}</h2>
@@ -861,181 +860,6 @@
       async function signOut() {
         me = null;
         await stSet("cp-me-" + evId, "", false);
-        render();
-      }
-
-      /* ---------- details panel ---------- */
-      function detailsPanel() {
-        const p = ev.people[me];
-        const isDrive = p.role === "drive";
-        const isRide = p.role === "ride";
-        const showSeats = isDrive || (isRide && p.flex);
-        const stats = isDrive ? carStats(me) : null;
-        let confirmBlock = "";
-        if (pendingRoleSwitch) {
-          confirmBlock = `<div class="notice">Switching to "${
-            pendingRoleSwitch === "ride" ? "I need a ride" : "driver"
-          }" removes your car — your ${carStats(me).used} passenger${
-            carStats(me).used > 1 ? "s" : ""
-          } go back to the pool.
-      <div class="row" style="margin-top:8px;">
-        <button class="small danger" onclick="confirmRoleSwitch()">Switch anyway</button>
-        <button class="small" onclick="cancelRoleSwitch()">Cancel</button>
-      </div></div>`;
-        }
-        if (pendingSeatChange != null) {
-          const excess = carStats(me).used - pendingSeatChange;
-          confirmBlock += `<div class="notice">Dropping to ${pendingSeatChange} seat${
-            pendingSeatChange > 1 ? "s" : ""
-          } removes your last ${excess} passenger${
-            excess > 1 ? "s" : ""
-          } — they go back to the pool.
-      <div class="row" style="margin-top:8px;">
-        <button class="small danger" onclick="confirmSeatChange()">Reduce seats</button>
-        <button class="small" onclick="pendingSeatChange=null; render();">Cancel</button>
-      </div></div>`;
-        }
-        return `<div class="card">
-    <div class="row" style="justify-content:space-between; margin-bottom:12px;">
-      <div class="row">
-        <div class="avatar" style="background:var(--blue-l); color:var(--blue-d);">${initials(
-          p.name
-        )}</div>
-        <span style="font-weight:600; font-size:14px;">${esc(p.name)}</span>
-      </div>
-      <button class="small" onclick="signOut()">Sign out</button>
-    </div>
-    <div style="border-top:1px solid var(--border); padding-top:12px;">
-      ${manualMatches()
-        .map(
-          (x) => `<div class="notice">${esc(ev.people[x.dk].name)} added "${esc(
-            x.m.n
-          )}"${x.m.loc ? ` (${esc(x.m.loc)})` : ""} to their car — is that you?
-        <div class="row" style="margin-top:8px;">
-          <button class="small primary" onclick="claimManual('${x.dk}','${
-            x.mid
-          }')">Take the seat</button>
-          <button class="small" onclick="dismissManual('${
-            x.mid
-          }')">Not me</button>
-        </div></div>`
-        )
-        .join("")}
-      ${confirmBlock}
-      <div class="radio-box" style="margin-bottom:12px;">
-        <label class="opt"><input type="radio" name="role" ${
-          isDrive ? "checked" : ""
-        } onchange="setRole('drive')"> I can drive</label>
-        <label class="opt"><input type="radio" name="role" ${
-          isRide ? "checked" : ""
-        } onchange="setRole('ride')"> I need a ride</label>
-        ${
-          isRide
-            ? `<label class="opt" style="margin-left:24px; font-size:13px; color:var(--text2);">
-            <input type="checkbox" ${
-              p.flex ? "checked" : ""
-            } onchange="saveMe({flex:this.checked})"> &hellip;but I can drive if needed</label>`
-            : ""
-        }
-        ${
-          showSeats
-            ? `<div style="margin-top:8px; padding-top:8px; border-top:1px solid var(--border);">
-          <label>${
-            isDrive
-              ? "Passenger seats (excl. you) *"
-              : "Seats if you end up driving"
-          }</label>
-          <input type="number" min="1" max="12" value="${esc(
-            p.seats
-          )}" onchange="setSeats(this)">
-        </div>`
-            : ""
-        }
-      </div>
-      <div class="field">
-        <label>${isDrive ? "Departing from *" : "Pickup location *"}</label>
-        <div class="row">
-          <input type="text" id="my-loc" value="${esc(
-            p.loc
-          )}" placeholder="Full street address" style="flex:1; min-width:0;" onchange="saveMe({loc:this.value.trim()})">
-          <button class="small" onclick="geoLocate(this,'my-loc')" title="Use my current location">Locate me</button>
-        </div>
-      </div>
-      ${
-        !isDrive
-          ? `<label class="opt" style="display:flex; gap:8px; font-size:13px; color:var(--text2); margin-bottom:10px; cursor:pointer;">
-        <input type="checkbox" ${
-          p.meet ? "checked" : ""
-        } onchange="saveMe({meet:this.checked})"> Happy to meet the car somewhere convenient</label>`
-          : ""
-      }
-      ${
-        isDrive
-          ? `<div class="field"><label>Leaving at</label>
-        <input type="time" value="${esc(
-          p.leaveAt
-        )}" onchange="saveMe({leaveAt:this.value})">
-        ${
-          ev.arriveBy
-            ? `<p class="tiny" style="margin:4px 0 0;">Event target: arrive by ${esc(
-                ev.arriveBy
-              )}.</p>`
-            : ""
-        }
-      </div>`
-          : ""
-      }
-      <div class="field"><label>Note for the group</label>
-        <input type="text" value="${esc(
-          p.note
-        )}" placeholder="Bringing a cooler" onchange="saveMe({note:this.value.trim()})"></div>
-      ${
-        p.carOf && ev.people[p.carOf]
-          ? `<div class="field">
-        <p class="muted" style="margin:0 0 6px;">You're in ${esc(
-          ev.people[p.carOf].name
-        )}'s car.</p></div>`
-          : ""
-      }
-      <p class="tiny">Changes save automatically.</p>
-    </div>
-  </div>`;
-      }
-
-      function setRole(role) {
-        const p = ev.people[me];
-        if (p.role === "drive" && role !== "drive" && carStats(me).used > 0) {
-          pendingRoleSwitch = role;
-          render();
-          return;
-        }
-        applyRole(role);
-      }
-      async function applyRole(role) {
-        await mutate((e) => {
-          const p = e.people[me];
-          p.role = role;
-          if (role === "drive") {
-            p.carOf = null;
-            p.flex = false;
-          }
-        });
-      }
-      async function confirmRoleSwitch() {
-        const role = pendingRoleSwitch;
-        pendingRoleSwitch = null;
-        await mutate((e) => {
-          Object.keys(e.people).forEach((k) => {
-            if (e.people[k].carOf === me) e.people[k].carOf = null;
-          });
-          const p = e.people[me];
-          p.role = role;
-          p.manualPax = [];
-          p.paxOrder = [];
-        });
-      }
-      function cancelRoleSwitch() {
-        pendingRoleSwitch = null;
         render();
       }
 
@@ -1748,7 +1572,7 @@
               ael.tagName === "TEXTAREA")
           )
             return;
-          if (pendingRoleSwitch || pendingSeatChange || addingPaxFor) return;
+          if (pendingSeatChange || addingPaxFor) return;
           if (pendingWrites > 0 || Date.now() - lastLocalEdit < 1500) return;
           const raw = await stGet("cp-ev-" + evId, true);
           if (raw && raw !== lastSnapshot) {
