@@ -19,5 +19,6 @@ Deploys to [Deno Deploy](https://deno.com/deploy) are manual, via
 deployctl deploy --project=carpool-planner server.ts
 ```
 
-`server.ts` imports `index.html` directly, so `deployctl` picks it up
-automatically — no separate upload step needed.
+`server.ts` imports `index.html`, `styles.css`, `state.js`, `storage.js`,
+`render.js`, and `actions.js` directly as local text files, so `deployctl`
+picks them all up automatically — no separate upload step needed.
