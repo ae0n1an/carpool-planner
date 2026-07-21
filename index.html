@@ -402,7 +402,7 @@
       function mapLink(text) {
         if (!text) return "";
         return `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-          text,
+          text
         )}" target="_blank" rel="noopener">${esc(text)}</a>`;
       }
       function hash(s) {
@@ -655,6 +655,7 @@
         app.innerHTML = `
     <div class="topbar">
       <div>
+        <button class="small" style="margin-top:8px;" onclick="backToLanding()">New trip</button>
         <h1>${esc(ev.name)}</h1>
         <p class="muted" style="margin:4px 0 0;">${esc(ev.date || "date TBC")}${
           ev.dest ? ` &middot; to ${mapLink(ev.dest)}` : ""
@@ -663,7 +664,6 @@
             ? ` &middot; aim to arrive by <b>${esc(ev.arriveBy)}</b>`
             : ""
         }</p>
-        <button class="small" style="margin-top:8px;" onclick="backToLanding()">New trip</button>
       </div>
       <div style="max-width:480px;">
         <div class="row" style="flex-wrap:wrap; justify-content:flex-end;">
@@ -783,9 +783,10 @@
           try {
             await navigator.share({
               title: ev && ev.name ? ev.name : "Carpool planner",
-              text: ev && ev.name
-                ? `Join "${ev.name}" on Carpool planner`
-                : "Join this carpool trip",
+              text:
+                ev && ev.name
+                  ? `Join "${ev.name}" on Carpool planner`
+                  : "Join this carpool trip",
               url: shareUrl(),
             });
           } catch (e) {
@@ -944,16 +945,18 @@
       function manualMatchBanner() {
         return manualMatches()
           .map(
-            (x) => `<div class="notice">${esc(ev.people[x.dk].name)} added "${esc(
-              x.m.n
-            )}"${x.m.loc ? ` (${esc(x.m.loc)})` : ""} to their car — is that you?
+            (x) => `<div class="notice">${esc(
+              ev.people[x.dk].name
+            )} added "${esc(x.m.n)}"${
+              x.m.loc ? ` (${esc(x.m.loc)})` : ""
+            } to their car — is that you?
         <div class="row" style="margin-top:8px;">
           <button class="small primary" onclick="claimManual('${x.dk}','${
               x.mid
             }')">Take the seat</button>
           <button class="small" onclick="dismissManual('${
-              x.mid
-            }')">Not me</button>
+            x.mid
+          }')">Not me</button>
         </div></div>`
           )
           .join("");
@@ -1094,7 +1097,9 @@
       function stopInfo(dk, id) {
         if (id.startsWith("p:")) {
           const p = ev.people[id.slice(2)];
-          return p ? { name: p.name, loc: p.loc, manual: false, note: p.note } : null;
+          return p
+            ? { name: p.name, loc: p.loc, manual: false, note: p.note }
+            : null;
         }
         const key = id.slice(2);
         const m = (ev.people[dk].manualPax || []).find(
@@ -1219,9 +1224,9 @@
       </div></div>`;
         }
         if (mine && pendingRemoveCar) {
-          carConfirmBlock += `<div class="notice">Removing your car sends your ${stats.used} passenger${
-            stats.used > 1 ? "s" : ""
-          } back to the pool.
+          carConfirmBlock += `<div class="notice">Removing your car sends your ${
+            stats.used
+          } passenger${stats.used > 1 ? "s" : ""} back to the pool.
       <div class="row" style="margin-top:8px;">
         <button class="small danger" onclick="confirmRemoveCar()">Remove anyway</button>
         <button class="small" onclick="cancelRemoveCar()">Cancel</button>
@@ -1235,9 +1240,7 @@
         )}'s car &middot; ${stats.cap + 1} seats</span>
         <p class="muted" style="margin:0;">${
           d.loc ? mapLink(d.loc) : "start TBC"
-        }${
-          ev.dest ? ` → ${mapLink(ev.dest)}` : ""
-        }${
+        }${ev.dest ? ` → ${mapLink(ev.dest)}` : ""}${
           mine
             ? ` &middot; <input type="time" value="${esc(
                 d.leaveAt
@@ -1255,12 +1258,8 @@
             ? `<input type="number" min="1" max="12" value="${esc(
                 d.seats
               )}" style="width:56px; padding:4px 6px;" onchange="editingSeats=false; setSeats(this);" aria-label="Passenger seats">`
-            : `<span class="badge" style="background:${ramp.l}; color:${ramp.d}; cursor:pointer;" onclick="editingSeats=true; render();" title="Edit seats">${
-                stats.used
-              }/${stats.cap}</span>`
-          : `<span class="badge" style="background:${ramp.l}; color:${ramp.d};">${
-              stats.used
-            }/${stats.cap}</span>`
+            : `<span class="badge" style="background:${ramp.l}; color:${ramp.d}; cursor:pointer;" onclick="editingSeats=true; render();" title="Edit seats">${stats.used}/${stats.cap}</span>`
+          : `<span class="badge" style="background:${ramp.l}; color:${ramp.d};">${stats.used}/${stats.cap}</span>`
       }
     </div>
     ${carConfirmBlock}
@@ -1498,8 +1497,8 @@
         const p = ev.people[k];
         return `<div class="pool-row">
     <div class="avatar" style="background:var(--blue-l); color:var(--blue-d);">${initials(
-          p.name
-        )}</div>
+      p.name
+    )}</div>
     <div style="flex:1; min-width:0;">
       <div style="font-size:13px; font-weight:600;">${esc(p.name)}</div>
       <div class="muted">${p.loc ? mapLink(p.loc) : "location TBC"}${
