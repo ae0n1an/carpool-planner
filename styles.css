@@ -1,0 +1,280 @@
+      :root {
+        --bg: #f6f5f2;
+        --card: #ffffff;
+        --border: #e3e1db;
+        --border-strong: #c9c6bd;
+        --text: #26251f;
+        --text2: #6f6d64;
+        --text3: #9c9a90;
+        --teal: #1d9e75;
+        --teal-l: #e1f5ee;
+        --teal-d: #04342c;
+        --teal-m: #0f6e56;
+        --purple: #7f77dd;
+        --purple-l: #eeedfe;
+        --purple-d: #26215c;
+        --purple-m: #534ab7;
+        --pink: #d4537e;
+        --pink-l: #fbeaf0;
+        --pink-d: #4b1528;
+        --pink-m: #993556;
+        --blue: #378add;
+        --blue-l: #e6f1fb;
+        --blue-d: #042c53;
+        --blue-m: #185fa5;
+        --amber: #fac775;
+        --amber-l: #faeeda;
+        --amber-d: #633806;
+        --amber-m: #ba7517;
+        --red: #a32d2d;
+        --red-l: #fcebeb;
+        --green-l: #eaf3de;
+        --green-d: #27500a;
+        --radius: 8px;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+          sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        font-size: 15px;
+        line-height: 1.5;
+      }
+      .wrap {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 24px 16px 64px;
+      }
+      h1 {
+        font-size: 22px;
+        font-weight: 600;
+        margin: 0;
+      }
+      h2 {
+        font-size: 15px;
+        font-weight: 600;
+        margin: 0;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px;
+      }
+      .muted {
+        color: var(--text2);
+        font-size: 13px;
+      }
+      .tiny {
+        color: var(--text3);
+        font-size: 12px;
+      }
+      label {
+        display: block;
+        font-size: 12px;
+        color: var(--text2);
+        margin: 0 0 4px;
+      }
+      input[type="text"],
+      input[type="password"],
+      input[type="number"],
+      input[type="date"],
+      input[type="time"],
+      select {
+        width: 100%;
+        padding: 8px 10px;
+        font-size: 14px;
+        font-family: inherit;
+        color: var(--text);
+        background: #fff;
+        border: 1px solid var(--border-strong);
+        border-radius: var(--radius);
+        outline: none;
+      }
+      input:focus,
+      select:focus {
+        border-color: var(--blue);
+        box-shadow: 0 0 0 3px var(--blue-l);
+      }
+      button {
+        font-family: inherit;
+        font-size: 13px;
+        color: var(--text);
+        background: #fff;
+        border: 1px solid var(--border-strong);
+        border-radius: var(--radius);
+        padding: 7px 14px;
+        cursor: pointer;
+      }
+      button:hover {
+        background: var(--bg);
+      }
+      button:active {
+        transform: scale(0.98);
+      }
+      button.primary {
+        background: var(--text);
+        color: #fff;
+        border-color: var(--text);
+      }
+      button.primary:hover {
+        background: #3d3c34;
+      }
+      button.danger {
+        color: var(--red);
+        border-color: #e8b8b8;
+      }
+      button.small {
+        font-size: 12px;
+        padding: 4px 10px;
+      }
+      .field {
+        margin-bottom: 12px;
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .radio-box {
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 10px 12px;
+      }
+      .radio-box label.opt {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        color: var(--text);
+        cursor: pointer;
+        padding: 4px 0;
+        margin: 0;
+      }
+      .badge {
+        display: inline-block;
+        font-size: 11px;
+        border-radius: 99px;
+        padding: 2px 8px;
+        vertical-align: 1px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 250px minmax(0, 1fr);
+        gap: 16px;
+      }
+      @media (max-width: 760px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      .cars {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+        gap: 12px;
+      }
+      .stop {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        padding: 2px 0;
+        font-size: 12px;
+        color: var(--text2);
+      }
+      .stopnum {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        font-size: 10px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        margin-top: 1px;
+      }
+      .pool-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 9px 0;
+        border-top: 1px solid var(--border);
+      }
+      .avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: 600;
+        flex-shrink: 0;
+      }
+      .notice {
+        background: var(--amber-l);
+        color: var(--amber-d);
+        border-radius: var(--radius);
+        padding: 8px 12px;
+        font-size: 13px;
+        margin-bottom: 12px;
+      }
+      .hint-warn {
+        color: var(--amber-d);
+        background: var(--amber-l);
+        border-radius: var(--radius);
+        padding: 5px 10px;
+        font-size: 12px;
+        display: inline-block;
+      }
+      .hint-ok {
+        color: var(--green-d);
+        background: var(--green-l);
+        border-radius: var(--radius);
+        padding: 5px 10px;
+        font-size: 12px;
+        display: inline-block;
+      }
+      .legend {
+        display: flex;
+        gap: 12px;
+        font-size: 11px;
+        color: var(--text2);
+        flex-wrap: wrap;
+      }
+      .sw {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 3px;
+        vertical-align: -1px;
+      }
+      code {
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 4px 8px;
+        font-size: 12px;
+        color: var(--text2);
+      }
+      .seat {
+        cursor: default;
+      }
+      .seat.open {
+        cursor: pointer;
+      }
+      a {
+        color: var(--blue-m);
+      }
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 16px;
+      }
