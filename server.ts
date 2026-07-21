@@ -1,4 +1,14 @@
-import htmlContent from "./index.html" with { type: "text" };
+import indexTemplate from "./index.html" with { type: "text" };
+import styles from "./styles.css" with { type: "text" };
+import stateJs from "./state.js" with { type: "text" };
+import storageJs from "./storage.js" with { type: "text" };
+import renderJs from "./render.js" with { type: "text" };
+import actionsJs from "./actions.js" with { type: "text" };
+
+const bundledScript = [stateJs, storageJs, renderJs, actionsJs].join("\n");
+const htmlContent = indexTemplate
+  .replace("/* STYLES_PLACEHOLDER */", () => styles)
+  .replace("/* SCRIPT_PLACEHOLDER */", () => bundledScript);
 
 // server.ts
 let kv: any = null;
